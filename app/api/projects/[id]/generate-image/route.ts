@@ -72,43 +72,32 @@ export async function POST(
       );
     }
 
-    // Call gemini-2.5-flash-image (Nano Banana)
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-image",
-    });
+    // Call Pollinations AI for free, fast image generation
+    const encodedPrompt = encodeURIComponent(prompt);
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true`;
+    
+    const imageResponse = await fetch(pollinationsUrl);
 
-    const response = await model.generateContent(prompt);
-    const parts = response.response.candidates?.[0]?.content?.parts;
-
-    if (!parts) {
+    if (!imageResponse.ok) {
       return NextResponse.json(
         { error: "Image generation returned no content", retryable: true },
         { status: 503 }
       );
     }
 
-    // Find the inline image data part
-    const imagePart = parts.find(
-      (part: any) => part.inlineData?.mimeType?.startsWith("image/")
-    );
+    const arrayBuffer = await imageResponse.arrayBuffer();
+    const imageBuffer = Buffer.from(arrayBuffer);
+    const mimeType = imageResponse.headers.get("content-type") || "image/jpeg";
 
-    if (!imagePart?.inlineData) {
-      return NextResponse.json(
-        { error: "No image data in response", retryable: true },
-        { status: 503 }
-      );
-    }
-
-    // Decode base64 and upload to Supabase Storage
-    const imageBuffer = Buffer.from(imagePart.inlineData.data, "base64");
     const fileId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const filePath = `${project.id}/${fileId}.png`;
+    const ext = mimeType === "image/jpeg" ? "jpg" : "png";
+    const filePath = `${project.id}/${fileId}.${ext}`;
 
     const imageUrl = await uploadToStorage(
       "generated-images",
       filePath,
       imageBuffer,
-      imagePart.inlineData.mimeType || "image/png"
+      mimeType
     );
 
     // Save GeneratedImage record

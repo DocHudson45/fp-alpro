@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createProjectSchema } from "@/lib/validators/project";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const parsed = createProjectSchema.safeParse(body);
 
@@ -18,6 +26,7 @@ export async function POST(req: Request) {
       data: {
         ...parsed.data,
         status: "DRAFT",
+        userId: user.id,
       },
     });
 
@@ -31,9 +40,19 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const projects = await db.project.findMany({
+      where: {
+        userId: user.id,
+      },
       orderBy: {
         createdAt: "desc",
       },

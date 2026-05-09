@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { genAI, callGeminiWithRetry } from "@/lib/gemini";
+import OpenAI from "openai";
 import { discoveryPromptTemplate } from "@/lib/prompts/discovery";
 
 export async function POST(
@@ -31,23 +31,39 @@ export async function POST(
       .replace("{desiredComplexity}", project.desiredComplexity || "not specified")
       .replace("{techStack}", project.techStack || "not specified");
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      generationConfig: {
-        temperature: 0.7,
-        responseMimeType: "application/json",
-      },
+    const client = new OpenAI({
+      baseURL: "https://router.huggingface.co/v1",
+      apiKey: process.env.HF_TOKEN,
     });
 
-    const result = await callGeminiWithRetry<{ questions: string[] }>(async () => {
-      const response = await model.generateContent(prompt);
-      return {
-        responseMimeType: "application/json",
-        text: response.response.text(),
-      };
-    });
+    let result: { questions: string[] } | null = null;
+    let retries = 2;
 
-    if (!result.questions || !Array.isArray(result.questions)) {
+    while (retries >= 0) {
+      try {
+        const completion = await client.chat.completions.create({
+          model: "Qwen/Qwen2.5-7B-Instruct",
+          messages: [
+            {
+              role: "user",
+              content: prompt + "\n\nIMPORTANT: You must return ONLY valid JSON. The JSON should be an object with a 'questions' array containing strings. Do not include markdown blocks like ```json.",
+            }
+          ],
+          temperature: 0.7,
+        });
+
+        const textResponse = completion.choices[0].message.content || "{}";
+        const cleanedText = textResponse.replace(/```json/g, "").replace(/```/g, "").trim();
+        result = JSON.parse(cleanedText);
+        break; // Success
+      } catch (err) {
+        if (retries === 0) throw err;
+        retries--;
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+
+    if (!result || !result.questions || !Array.isArray(result.questions)) {
       throw new Error("Invalid format from AI");
     }
 

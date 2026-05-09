@@ -159,7 +159,7 @@ export function ProjectForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-slate-900">Kompleksitas (opsional)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="bg-slate-50 focus-visible:ring-blue-500">
                           <SelectValue placeholder="Pilih kompleksitas" />
@@ -184,7 +184,7 @@ export function ProjectForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-slate-900">Tech Stack (opsional)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="bg-slate-50 focus-visible:ring-blue-500">
                           <SelectValue placeholder="Pilih tech stack" />

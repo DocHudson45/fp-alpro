@@ -20,9 +20,10 @@ interface DiscoveryQuestionsProps {
   projectId: string;
   questions: DiscoveryQA[];
   onAnalyzeStart: () => void;
+  onAnalyzeComplete: () => void;
 }
 
-export function DiscoveryQuestions({ projectId, questions, onAnalyzeStart }: DiscoveryQuestionsProps) {
+export function DiscoveryQuestions({ projectId, questions, onAnalyzeStart, onAnalyzeComplete }: DiscoveryQuestionsProps) {
   const router = useRouter();
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,9 +47,9 @@ export function DiscoveryQuestions({ projectId, questions, onAnalyzeStart }: Dis
       });
 
       if (!res.ok) throw new Error("Gagal melakukan analisis");
-      
+
       toast.success("Analisis berhasil dibuat!");
-      router.refresh();
+      onAnalyzeComplete();
     } catch (error) {
       toast.error("Terjadi kesalahan. Coba lagi nanti.");
     } finally {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { genAI, callGeminiWithRetry } from "@/lib/gemini";
+import OpenAI from "openai";
 import { analysisPromptTemplate } from "@/lib/prompts/analysis";
 
 export async function POST(
@@ -54,21 +54,37 @@ export async function POST(
       .replace("{references}", project.references.join(", ") || "none")
       .replace("{qaPairs}", qaPairsText);
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      generationConfig: {
-        temperature: 0.5,
-        responseMimeType: "application/json",
-      },
+    const client = new OpenAI({
+      baseURL: "https://router.huggingface.co/v1",
+      apiKey: process.env.HF_TOKEN,
     });
 
-    const analysisData = await callGeminiWithRetry<any>(async () => {
-      const response = await model.generateContent(prompt);
-      return {
-        responseMimeType: "application/json",
-        text: response.response.text(),
-      };
-    });
+    let analysisData;
+    let retries = 2;
+    
+    while (retries >= 0) {
+      try {
+        const completion = await client.chat.completions.create({
+          model: "Qwen/Qwen2.5-7B-Instruct",
+          messages: [
+            {
+              role: "user",
+              content: prompt + "\n\nIMPORTANT: You must return ONLY valid JSON. Do not include markdown blocks like ```json or any other text.",
+            }
+          ],
+          temperature: 0.5,
+        });
+
+        const textResponse = completion.choices[0].message.content || "{}";
+        const cleanedText = textResponse.replace(/```json/g, "").replace(/```/g, "").trim();
+        analysisData = JSON.parse(cleanedText);
+        break; // Success
+      } catch (err) {
+        if (retries === 0) throw err;
+        retries--;
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
 
     const upsertedAnalysis = await db.analysis.upsert({
       where: { projectId: project.id },

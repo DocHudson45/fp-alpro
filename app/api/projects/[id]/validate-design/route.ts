@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { genAI, callGeminiWithRetry } from "@/lib/gemini";
+import OpenAI from "openai";
 import { uploadToStorage } from "@/lib/supabase-storage";
 import { validationPromptTemplate } from "@/lib/prompts/validation";
 
@@ -82,30 +82,54 @@ export async function POST(
       .replace("{mustHaveFeatures}", (featureScope.mustHave || []).join(", "))
       .replace("{mood}", (visualDirection.mood || []).join(", "));
 
-    // Call Gemini multimodal with image
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      generationConfig: {
-        temperature: 0.4,
-        responseMimeType: "application/json",
-      },
+    const client = new OpenAI({
+      baseURL: "https://router.huggingface.co/v1",
+      apiKey: process.env.HF_TOKEN,
     });
 
-    const feedback = await callGeminiWithRetry<any>(async () => {
-      const response = await model.generateContent([
-        prompt,
-        {
-          inlineData: {
-            mimeType: imageFile.type,
-            data: imageBuffer.toString("base64"),
-          },
-        },
-      ]);
-      return {
-        responseMimeType: "application/json",
-        text: response.response.text(),
-      };
-    });
+    const base64Image = `data:${imageFile.type};base64,${imageBuffer.toString("base64")}`;
+    
+    let feedback: any = null;
+    let retries = 2;
+
+    while (retries >= 0) {
+      try {
+        const completion = await client.chat.completions.create({
+          model: "Qwen/Qwen2.5-VL-7B-Instruct:hyperbolic",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: prompt + "\n\nIMPORTANT: You must return ONLY valid JSON. Do not include markdown blocks like ```json.",
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: base64Image,
+                  },
+                },
+              ],
+            },
+          ],
+          temperature: 0.4,
+        });
+
+        const textResponse = completion.choices[0].message.content || "{}";
+        const cleanedText = textResponse.replace(/```json/g, "").replace(/```/g, "").trim();
+        feedback = JSON.parse(cleanedText);
+        break; // Success
+      } catch (err) {
+        if (retries === 0) throw err;
+        retries--;
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+
+    if (!feedback) {
+      throw new Error("Invalid format from AI");
+    }
 
     // Save DesignValidation record
     const validation = await db.designValidation.create({

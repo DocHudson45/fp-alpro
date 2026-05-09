@@ -44,9 +44,9 @@ This separation allows Gemini to perform best with English prompts while deliver
 | ORM                 | Prisma                   | Type-safe DB access                           |
 | Database            | PostgreSQL via Supabase  | Free tier                                     |
 | File Storage        | Supabase Storage         | For uploaded design images & generated images |
-| AI Text Provider    | Google Gemini API        | Model: `gemini-2.5-flash`                     |
-| AI Vision Provider  | Google Gemini API        | Model: `gemini-2.5-flash` (multimodal)        |
-| AI Image Generation | Google Gemini API        | Model: `gemini-2.5-flash-image` (Nano Banana) |
+| AI Text Provider    | Google Gemini API        | Model: `gemini-2.0-flash`                     |
+| AI Vision Provider  | Google Gemini API        | Model: `gemini-2.0-flash` (multimodal)        |
+| AI Image Generation | Google Gemini API        | Model: `gemini-2.0-flash-image` (Nano Banana) |
 | Form Validation     | react-hook-form + zod    |                                               |
 | Deployment          | Vercel                   | Auto-deploy from main branch                  |
 
@@ -509,7 +509,7 @@ Project & {
    No validationId → use buildImagePrompt() (Path 1, see §6.5)
    With validationId → use buildImagePromptFromValidation() (Path 2, see §6.5)
 
-4. Call Gemini gemini-2.5-flash-image model.
+4. Call Gemini gemini-2.0-flash-image model.
 5. Receive image binary (base64), decode, upload to Supabase Storage at generated-images/{projectId}/{cuid}.png.
 6. Save GeneratedImage record with imageType and prompt used.
 7. Return { imageUrl: string, id: string }.
@@ -545,7 +545,7 @@ All prompts are written in English. All Gemini calls should set `temperature` an
 
 ### 6.1 Discovery Prompt (`lib/prompts/discovery.ts`)
 
-**Model:** `gemini-2.5-flash`
+**Model:** `gemini-2.0-flash`
 **Config:** `temperature: 0.7`, `responseMimeType: "application/json"`
 
 ```
@@ -579,7 +579,7 @@ OUTPUT FORMAT (JSON):
 
 ### 6.2 Analysis Prompt (`lib/prompts/analysis.ts`)
 
-**Model:** `gemini-2.5-flash`
+**Model:** `gemini-2.0-flash`
 **Config:** `temperature: 0.5`, `responseMimeType: "application/json"`
 
 ```
@@ -649,7 +649,7 @@ OUTPUT SCHEMA (JSON):
 
 ### 6.3 Builder Prompt Template (`lib/prompts/builder.ts`)
 
-**Model:** `gemini-2.5-flash`
+**Model:** `gemini-2.0-flash`
 **Config:** `temperature: 0.7`, plain text output
 
 ```
@@ -676,7 +676,7 @@ OUTPUT: Plain text prompt only. No JSON, no markdown fences. Begin directly with
 
 ### 6.4 Design Validation Prompt (`lib/prompts/validation.ts`)
 
-**Model:** `gemini-2.5-flash` (multimodal — accepts image input)
+**Model:** `gemini-2.0-flash` (multimodal — accepts image input)
 **Config:** `temperature: 0.4`, `responseMimeType: "application/json"`
 
 ```
@@ -720,7 +720,7 @@ OUTPUT SCHEMA (JSON):
 
 ### 6.5 Image Generation Prompt (`lib/prompts/imageGeneration.ts`)
 
-**Model:** `gemini-2.5-flash-image` (Nano Banana)
+**Model:** `gemini-2.0-flash-image` (Nano Banana)
 **Config:** Default. Single image output.
 
 The prompt is constructed programmatically from `Analysis.visualDirection`:

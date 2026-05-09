@@ -185,6 +185,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           onAnalyzeStart={() => {
             toast.info("Sedang menganalisis jawaban dan membuat panduan...");
           }}
+          onAnalyzeComplete={() => {
+            fetchProject();
+          }}
         />
       )}
 

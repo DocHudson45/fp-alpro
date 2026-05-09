@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { genAI } from "@/lib/gemini";
+import OpenAI from "openai";
 import { builderPromptTemplate } from "@/lib/prompts/builder";
 
 const VALID_TOOLS = [
@@ -53,15 +53,23 @@ export async function POST(
       .replace("{targetUser}", project.targetUser || "not specified")
       .replace("{mood}", (visualDirection.mood || []).join(", "));
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      generationConfig: {
-        temperature: 0.7,
-      },
+    const client = new OpenAI({
+      baseURL: "https://router.huggingface.co/v1",
+      apiKey: process.env.HF_TOKEN,
     });
 
-    const response = await model.generateContent(prompt);
-    const generatedPrompt = response.response.text();
+    const completion = await client.chat.completions.create({
+      model: "Qwen/Qwen2.5-7B-Instruct",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        }
+      ],
+      temperature: 0.7,
+    });
+
+    const generatedPrompt = completion.choices[0].message.content || "";
 
     // Save to analysis record
     await db.analysis.update({
