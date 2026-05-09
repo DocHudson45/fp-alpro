@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { DiscoveryQuestions } from "@/components/DiscoveryQuestions";
 import { AnalysisResult } from "@/components/AnalysisResult";
+import { ChatPanel } from "@/components/ChatPanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
@@ -81,8 +82,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
+  const isAnalyzed = project.status === "ANALYZED" && project.analysis;
+
   return (
-    <div className="container mx-auto px-4 py-10 max-w-4xl">
+    <div className={`container mx-auto px-4 py-10 ${isAnalyzed ? "max-w-[1400px]" : "max-w-4xl"}`}>
       <Button asChild variant="ghost" className="mb-6 -ml-4 text-slate-500 hover:text-slate-900">
         <Link href="/projects">
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -90,6 +93,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </Link>
       </Button>
 
+      {/* Project Info Summary */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 mb-8 shadow-sm">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-6 border-b border-slate-100">
           <div>
@@ -145,6 +149,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
+      {/* DRAFT State */}
       {project.status === "DRAFT" && (
         <div className="text-center py-16 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
           <div className="mx-auto w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-6">
@@ -172,20 +177,36 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
+      {/* DISCOVERY State */}
       {project.status === "DISCOVERY" && project.discoveryQAs && (
         <DiscoveryQuestions 
           projectId={project.id} 
           questions={project.discoveryQAs} 
           onAnalyzeStart={() => {
-            // Optimistic update to loading state can be handled here or just wait for refresh
             toast.info("Sedang menganalisis jawaban dan membuat panduan...");
           }}
         />
       )}
 
-      {project.status === "ANALYZED" && project.analysis && (
-        <AnalysisResult analysis={project.analysis} />
+      {/* ANALYZED State — Two Column Layout */}
+      {isAnalyzed && (
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left Column: Analysis Cards (40%) */}
+          <div className="w-full lg:w-2/5 shrink-0">
+            <AnalysisResult analysis={project.analysis} projectId={project.id} />
+          </div>
+
+          {/* Right Column: Chat Panel (60%) */}
+          <div className="w-full lg:w-3/5 lg:sticky lg:top-6 lg:self-start" style={{ height: "calc(100vh - 6rem)" }}>
+            <ChatPanel
+              projectId={project.id}
+              existingValidations={project.designValidations}
+              existingImages={project.generatedImages}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
 }
+
