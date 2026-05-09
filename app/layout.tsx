@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { Toaster } from "@/components/ui/sonner";
+import { createClient } from "@/lib/supabase/server";
+import { logout } from "@/app/(auth)/actions";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -11,11 +13,13 @@ export const metadata: Metadata = {
   description: "Ubah brief klien yang vague jadi panduan website yang jelas.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   return (
     <html lang="id">
       <body className={`${inter.className} min-h-screen bg-slate-50 flex flex-col`}>
@@ -32,6 +36,20 @@ export default function RootLayout({
               >
                 Project
               </Link>
+              {user ? (
+                <form action={logout}>
+                  <button type="submit" className="transition-colors hover:text-foreground/80 text-foreground/60">
+                    Logout
+                  </button>
+                </form>
+              ) : (
+                <Link
+                  href="/login"
+                  className="transition-colors hover:text-foreground/80 text-foreground/60"
+                >
+                  Login
+                </Link>
+              )}
             </nav>
           </div>
         </header>

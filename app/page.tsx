@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Lightbulb, FileSearch, CheckCircle } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   return (
     <div className="flex flex-col min-h-[calc(100vh-3.5rem)] bg-white">
       {/* Hero Section */}
@@ -18,7 +21,7 @@ export default function Home() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
           <Button asChild size="lg" className="rounded-full px-8 shadow-sm">
-            <Link href="/projects/new">
+            <Link href={user ? "/projects/new" : "/login"}>
               Mulai Project Baru <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>

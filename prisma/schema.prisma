@@ -12,8 +12,20 @@ enum ProjectStatus {
   ANALYZED
 }
 
+model User {
+  id        String   @id // Matches Supabase Auth UUID
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects  Project[]
+}
+
 model Project {
   id                 String        @id @default(cuid())
+  userId             String?
+  user               User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // User input fields
   clientRequest      String        @db.Text
