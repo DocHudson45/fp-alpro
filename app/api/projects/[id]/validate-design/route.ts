@@ -95,7 +95,7 @@ export async function POST(
     while (retries >= 0) {
       try {
         const completion = await client.chat.completions.create({
-          model: "Qwen/Qwen2.5-VL-7B-Instruct:hyperbolic",
+          model: "Qwen/Qwen2.5-VL-72B-Instruct",
           messages: [
             {
               role: "user",
