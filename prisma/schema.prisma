@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+enum ProjectStatus {
+  DRAFT
+  DISCOVERY
+  ANALYZED
+}
+
+model Project {
+  id                 String        @id @default(cuid())
+
+  // User input fields
+  clientRequest      String        @db.Text
+  businessType       String?
+  targetUser         String?
+  websiteGoal        String?
+  budget             String?
+  desiredComplexity  String?
+  techStack          String?
+  freelancerRate     Int?
+  references         String[]
+
+  status             ProjectStatus @default(DRAFT)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  discoveryQAs       DiscoveryQA[]
+  analysis           Analysis?
+  designValidations  DesignValidation[]
+  generatedImages    GeneratedImage[]
+}
+
+model DiscoveryQA {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  question    String   @db.Text
+  answer      String?  @db.Text
+  order       Int
+
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model Analysis {
+  id                 String   @id @default(cuid())
+  projectId          String   @unique
+  project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  websiteDirection   String   @db.Text
+  uxReasoning        String   @db.Text
+  featureScope       Json
+  complexity         String
+  complexityReason   String   @db.Text
+  effortEstimate     Json
+  riskFactors        Json
+  visualDirection    Json
+
+  builderPrompt      String?  @db.Text
+  builderTargetTool  String?
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model DesignValidation {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  imageUrl    String
+  feedback    Json
+
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model GeneratedImage {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  prompt      String   @db.Text
+  imageUrl    String
+  imageType   String   // "moodboard" | "concept"
+
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+}
