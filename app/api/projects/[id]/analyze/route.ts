@@ -40,7 +40,7 @@ export async function POST(
     });
 
     const qaPairsText = qas.length > 0
-      ? qas.map((qa) => `Q: ${qa.question}\nA: ${qa.answer || "No answer provided."}`).join("\n\n")
+      ? qas.map((qa: any) => `Q: ${qa.question}\nA: ${qa.answer || "No answer provided."}`).join("\n\n")
       : "User skipped discovery; make reasonable assumptions for mobile UI/UX and note them.";
 
     const prompt = analysisPromptTemplate
