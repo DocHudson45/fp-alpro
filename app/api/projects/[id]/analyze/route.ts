@@ -39,19 +39,20 @@ export async function POST(
       orderBy: { order: "asc" },
     });
 
-    const qaPairsText = qas.length > 0 
+    const qaPairsText = qas.length > 0
       ? qas.map((qa) => `Q: ${qa.question}\nA: ${qa.answer || "No answer provided."}`).join("\n\n")
-      : "User skipped discovery; make reasonable assumptions and note them.";
+      : "User skipped discovery; make reasonable assumptions for mobile UI/UX and note them.";
 
     const prompt = analysisPromptTemplate
-      .replace("{clientRequest}", project.clientRequest)
+      .replace("{name}", project.name || "not specified")
+      .replace("{description}", project.description || (project as any).clientRequest || "not specified")
       .replace("{businessType}", project.businessType || "not specified")
       .replace("{targetUser}", project.targetUser || "not specified")
-      .replace("{websiteGoal}", project.websiteGoal || "not specified")
-      .replace("{budget}", project.budget || "not specified")
+      .replace("{appGoal}", project.appGoal || (project as any).websiteGoal || "not specified")
       .replace("{desiredComplexity}", project.desiredComplexity || "not specified")
       .replace("{techStack}", project.techStack || "not specified")
       .replace("{references}", project.references.join(", ") || "none")
+      .replace("{referenceSummaries}", project.referenceSummaries.join("\n") || "none")
       .replace("{qaPairs}", qaPairsText);
 
     const client = new OpenAI({
@@ -61,7 +62,7 @@ export async function POST(
 
     let analysisData;
     let retries = 2;
-    
+
     while (retries >= 0) {
       try {
         const completion = await client.chat.completions.create({
@@ -69,7 +70,7 @@ export async function POST(
           messages: [
             {
               role: "user",
-              content: prompt + "\n\nIMPORTANT: You must return ONLY valid JSON. Do not include markdown blocks like ```json or any other text.",
+              content: prompt + "\n\nIMPORTANT: Return ONLY valid JSON.",
             }
           ],
           temperature: 0.5,
@@ -90,7 +91,7 @@ export async function POST(
       where: { projectId: project.id },
       create: {
         projectId: project.id,
-        websiteDirection: analysisData.websiteDirection,
+        designDirection: analysisData.designDirection || analysisData.websiteDirection,
         uxReasoning: analysisData.uxReasoning,
         featureScope: analysisData.featureScope,
         complexity: analysisData.complexity,
@@ -100,7 +101,7 @@ export async function POST(
         visualDirection: analysisData.visualDirection,
       },
       update: {
-        websiteDirection: analysisData.websiteDirection,
+        designDirection: analysisData.designDirection || analysisData.websiteDirection,
         uxReasoning: analysisData.uxReasoning,
         featureScope: analysisData.featureScope,
         complexity: analysisData.complexity,
@@ -125,3 +126,4 @@ export async function POST(
     );
   }
 }
+

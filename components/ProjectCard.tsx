@@ -22,7 +22,8 @@ import {
 interface ProjectCardProps {
   project: {
     id: string;
-    clientRequest: string;
+    name: string;
+    description: string;
     businessType: string | null;
     status: "DRAFT" | "DISCOVERY" | "ANALYZED";
     createdAt: Date;
@@ -37,13 +38,13 @@ export function ProjectCard({ project, onDelete }: ProjectCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "DRAFT":
-        return "bg-slate-100 text-slate-700 hover:bg-slate-100";
+        return "bg-neutral-800 text-neutral-400 hover:bg-neutral-800";
       case "DISCOVERY":
-        return "bg-blue-100 text-blue-700 hover:bg-blue-100";
+        return "bg-violet-500/10 text-violet-400 hover:bg-violet-500/10";
       case "ANALYZED":
-        return "bg-emerald-100 text-emerald-700 hover:bg-emerald-100";
+        return "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/10";
       default:
-        return "bg-slate-100 text-slate-700";
+        return "bg-neutral-800 text-neutral-400";
     }
   };
 
@@ -54,7 +55,7 @@ export function ProjectCard({ project, onDelete }: ProjectCardProps) {
       case "DISCOVERY":
         return "Discovery";
       case "ANALYZED":
-        return "Selesai Analisis";
+        return "Analyzed";
       default:
         return status;
     }
@@ -78,33 +79,34 @@ export function ProjectCard({ project, onDelete }: ProjectCardProps) {
     }
   };
 
-  const truncatedRequest = 
-    project.clientRequest.length > 100 
-      ? project.clientRequest.substring(0, 100) + "..." 
-      : project.clientRequest;
+  const desc = project.description || (project as any).clientRequest || "";
+  const truncatedDesc = 
+    desc.length > 100 
+      ? desc.substring(0, 100) + "..." 
+      : desc;
 
   return (
-    <Card className="flex flex-col overflow-hidden transition-all hover:shadow-md border-slate-200">
-      <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
+    <Card className="flex flex-col overflow-hidden transition-all border-white/[0.06] bg-[#141414] hover:bg-[#1a1a1a] hover:border-white/[0.1]">
+      <CardHeader className="bg-[#111111] border-b border-white/[0.04] pb-4">
         <div className="flex justify-between items-start">
-          <Badge className={`font-medium shadow-none ${getStatusColor(project.status)}`}>
+          <Badge className={`font-medium shadow-none border-0 ${getStatusColor(project.status)}`}>
             {getStatusText(project.status)}
           </Badge>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger 
-              render={<Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 -mt-2 -mr-2" />}
+            <DialogTrigger
+              render={<Button variant="ghost" size="icon" className="h-8 w-8 text-neutral-600 hover:text-red-400 hover:bg-red-500/10 -mt-2 -mr-2" />}
             >
               <Trash2 className="h-4 w-4" />
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="bg-[#1a1a1a] border-white/[0.08]">
               <DialogHeader>
-                <DialogTitle>Hapus Project?</DialogTitle>
-                <DialogDescription>
+                <DialogTitle className="text-neutral-100">Hapus Project?</DialogTitle>
+                <DialogDescription className="text-neutral-400">
                   Tindakan ini tidak dapat dibatalkan. Semua data analisis dan discovery dari project ini akan dihapus permanen.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setOpen(false)} disabled={isDeleting}>
+                <Button variant="outline" onClick={() => setOpen(false)} disabled={isDeleting} className="border-white/[0.08] text-neutral-300 hover:bg-white/[0.04]">
                   Batal
                 </Button>
                 <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
@@ -114,22 +116,22 @@ export function ProjectCard({ project, onDelete }: ProjectCardProps) {
             </DialogContent>
           </Dialog>
         </div>
-        <CardTitle className="text-lg font-bold text-slate-900 mt-2 truncate">
-          {project.businessType || "Project Tanpa Nama Bisnis"}
+        <CardTitle className="text-lg font-bold text-neutral-100 mt-2 truncate">
+          {project.name || project.businessType || "Untitled Project"}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 pt-4">
-        <p className="text-sm text-slate-600 line-clamp-3">
-          "{truncatedRequest}"
+        <p className="text-sm text-neutral-500 line-clamp-3">
+          {truncatedDesc}
         </p>
       </CardContent>
-      <CardFooter className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 pt-4 pb-4">
-        <span className="text-xs text-slate-500 font-medium">
+      <CardFooter className="flex items-center justify-between border-t border-white/[0.04] bg-[#111111]/50 pt-4 pb-4">
+        <span className="text-xs text-neutral-600 font-medium">
           {formatDistanceToNow(new Date(project.createdAt), { addSuffix: true, locale: id })}
         </span>
-        <Button asChild size="sm" variant="default" className="shadow-sm">
+        <Button asChild size="sm" className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm">
           <Link href={`/projects/${project.id}`}>
-            Lihat Detail
+            Buka
           </Link>
         </Button>
       </CardFooter>

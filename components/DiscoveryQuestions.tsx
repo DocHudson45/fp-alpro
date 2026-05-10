@@ -60,19 +60,19 @@ export function DiscoveryQuestions({ projectId, questions, onAnalyzeStart, onAna
 
   return (
     <div className="space-y-6">
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8 text-blue-900">
-        <h3 className="font-semibold text-lg mb-2">Discovery Phase</h3>
-        <p className="text-blue-700/80">
-          AI telah menyiapkan beberapa pertanyaan tajam berdasarkan brief-mu. Jawab bersama klien (atau jawab sendiri jika kamu sudah tahu) untuk mendapatkan hasil analisis yang paling akurat. Kamu juga bisa melewati bagian ini jika informasi dirasa sudah cukup.
+      <div className="bg-violet-500/5 border border-violet-500/10 rounded-xl p-6 mb-8">
+        <h3 className="font-semibold text-lg mb-2 text-violet-300">Discovery Phase</h3>
+        <p className="text-neutral-400 text-sm">
+          AI telah menyiapkan pertanyaan berdasarkan deskripsi projek. Jawab untuk mendapatkan analisis desain mobile UI/UX yang lebih akurat.
         </p>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-6">
         {questions.map((q, i) => (
-          <Card key={q.id} className="border-slate-200 shadow-sm overflow-hidden">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
-              <CardTitle className="text-base font-semibold text-slate-900 leading-relaxed flex gap-3">
-                <span className="flex-shrink-0 flex items-center justify-center bg-white border border-slate-200 h-6 w-6 rounded-full text-xs text-slate-500 font-bold">
+          <Card key={q.id} className="border-white/[0.06] bg-[#141414] overflow-hidden">
+            <CardHeader className="bg-[#111111] border-b border-white/[0.04] pb-3">
+              <CardTitle className="text-sm font-semibold text-neutral-200 leading-relaxed flex gap-3">
+                <span className="flex-shrink-0 flex items-center justify-center bg-[#1a1a1a] border border-white/[0.06] h-6 w-6 rounded-full text-[10px] text-neutral-500 font-bold">
                   {i + 1}
                 </span>
                 {q.question}
@@ -83,7 +83,7 @@ export function DiscoveryQuestions({ projectId, questions, onAnalyzeStart, onAna
               <Textarea
                 id={`answer-${q.id}`}
                 placeholder="Ketik jawaban di sini..."
-                className="min-h-[100px] bg-white resize-none focus-visible:ring-blue-500"
+                className="min-h-[80px] bg-[#1a1a1a] border-white/[0.06] text-neutral-200 placeholder:text-neutral-600 resize-none focus-visible:ring-violet-500/50"
                 value={answers[q.id] || ""}
                 onChange={(e) => handleAnswerChange(q.id, e.target.value)}
               />
@@ -92,25 +92,25 @@ export function DiscoveryQuestions({ projectId, questions, onAnalyzeStart, onAna
         ))}
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-end gap-4 pt-8 mt-8 border-t border-slate-200">
+      <div className="flex flex-col sm:flex-row justify-end gap-3 pt-8 mt-8 border-t border-white/[0.06]">
         <Button
           variant="outline"
           size="lg"
           onClick={() => submitAnswers(true)}
           disabled={isSubmitting || isSkipping}
-          className="rounded-full shadow-sm text-slate-600"
+          className="rounded-xl border-white/[0.08] bg-transparent text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200"
         >
           {isSkipping ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SkipForward className="mr-2 h-4 w-4" />}
-          Lewati & Generate Analisis
+          Lewati & Analisis
         </Button>
         <Button
           size="lg"
           onClick={() => submitAnswers(false)}
           disabled={isSubmitting || isSkipping}
-          className="rounded-full shadow-sm px-8"
+          className="rounded-xl bg-violet-600 hover:bg-violet-700 text-white shadow-lg shadow-violet-900/30 px-8"
         >
           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SendHorizontal className="mr-2 h-4 w-4" />}
-          Submit Jawaban & Generate
+          Submit & Analisis
         </Button>
       </div>
     </div>

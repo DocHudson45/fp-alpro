@@ -19,57 +19,45 @@ interface ComplexityProps {
 
 export function ComplexityCard({ complexity, reason, estimate }: ComplexityProps) {
   const getComplexityColor = (comp: string) => {
-    if (comp.toLowerCase().includes("simple")) return "bg-emerald-100 text-emerald-800";
-    if (comp.toLowerCase().includes("medium")) return "bg-blue-100 text-blue-800";
-    if (comp.toLowerCase().includes("advanced")) return "bg-amber-100 text-amber-800";
-    return "bg-rose-100 text-rose-800";
+    if (comp.toLowerCase().includes("simple")) return "bg-emerald-500/10 text-emerald-400";
+    if (comp.toLowerCase().includes("medium")) return "bg-blue-500/10 text-blue-400";
+    if (comp.toLowerCase().includes("advanced")) return "bg-amber-500/10 text-amber-400";
+    return "bg-rose-500/10 text-rose-400";
   };
 
   return (
-    <Card className="border-slate-200 shadow-sm overflow-hidden">
-      <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <Gauge className="h-5 w-5 text-slate-600" />
-            Kompleksitas & Estimasi
+    <Card className="border-white/[0.06] bg-[#141414] overflow-hidden">
+      <CardHeader className="bg-[#111111] border-b border-white/[0.04] pb-3">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-sm font-bold text-neutral-200 flex items-center gap-2">
+            <Gauge className="h-4 w-4 text-neutral-400" />
+            Kompleksitas
           </CardTitle>
-          <Badge className={`shadow-none font-medium ${getComplexityColor(complexity)}`}>
+          <Badge className={`shadow-none font-medium border-0 text-[10px] ${getComplexityColor(complexity)}`}>
             {complexity}
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="pt-6 space-y-6">
-        <div>
-          <p className="text-sm text-slate-600 mb-4">{reason}</p>
-          <div className="bg-slate-100/50 p-4 rounded-xl border border-slate-100 flex items-center justify-center">
-            <span className="text-2xl font-bold text-slate-900">
-              {estimate.min} - {estimate.max} Jam
-            </span>
-          </div>
+      <CardContent className="pt-4 pb-4 space-y-4">
+        <p className="text-xs text-neutral-500 leading-relaxed">{reason}</p>
+        <div className="bg-[#1a1a1a] p-3 rounded-lg border border-white/[0.04] text-center">
+          <span className="text-lg font-bold text-neutral-200">
+            {estimate.min} – {estimate.max}
+          </span>
+          <span className="text-xs text-neutral-500 ml-1">jam</span>
         </div>
-
-        <div>
-          <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Breakdown Waktu</h4>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-600 font-medium">Desain UI/UX</span>
-              <span className="text-slate-900">{estimate.breakdown.design}</span>
+        <div className="space-y-2">
+          {[
+            { label: "Desain UI/UX", value: estimate.breakdown.design },
+            { label: "Frontend", value: estimate.breakdown.frontend },
+            ...(estimate.breakdown.backend ? [{ label: "Backend", value: estimate.breakdown.backend }] : []),
+            { label: "Revisi", value: estimate.breakdown.revision },
+          ].map((item, i) => (
+            <div key={i} className="flex justify-between items-center text-xs">
+              <span className="text-neutral-500">{item.label}</span>
+              <span className="text-neutral-300 font-medium">{item.value}</span>
             </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-600 font-medium">Frontend</span>
-              <span className="text-slate-900">{estimate.breakdown.frontend}</span>
-            </div>
-            {estimate.breakdown.backend && (
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-600 font-medium">Backend / CMS</span>
-                <span className="text-slate-900">{estimate.breakdown.backend}</span>
-              </div>
-            )}
-            <div className="flex justify-between items-center text-sm pt-2 border-t border-slate-100">
-              <span className="text-slate-600 font-medium">Revisi & Finalisasi</span>
-              <span className="text-slate-900">{estimate.breakdown.revision}</span>
-            </div>
-          </div>
+          ))}
         </div>
       </CardContent>
     </Card>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { genAI } from "@/lib/gemini";
+import { OpenAI } from "openai";
 import { uploadToStorage } from "@/lib/supabase-storage";
 import { validationPromptTemplate } from "@/lib/prompts/validation";
 
@@ -13,133 +13,82 @@ export async function POST(
 ) {
   try {
     const id = (await params).id;
-
     const formData = await req.formData();
     const imageFile = formData.get("image") as File | null;
+    const validationId = formData.get("validationId") as string | null;
     const userRequest = formData.get("userRequest") as string | null;
-
-    if (!imageFile) {
-      return NextResponse.json(
-        { error: "No image file provided" },
-        { status: 400 }
-      );
-    }
-
-    // Validate MIME type
-    if (!ALLOWED_MIME_TYPES.includes(imageFile.type)) {
-      return NextResponse.json(
-        { error: "Invalid file type. Only PNG and JPEG are allowed." },
-        { status: 415 }
-      );
-    }
-
-    // Validate file size
-    if (imageFile.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: "File too large. Maximum size is 5MB." },
-        { status: 413 }
-      );
-    }
 
     const project = await db.project.findUnique({
       where: { id },
       include: { analysis: true },
     });
 
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    if (!project || !project.analysis) {
+      return NextResponse.json({ error: "Project or Analysis not found" }, { status: 400 });
     }
 
-    if (!project.analysis) {
-      return NextResponse.json(
-        { error: "Analysis not found. Run analysis first." },
-        { status: 400 }
-      );
+    let imageUrl = "";
+    let imageBuffer: Buffer | null = null;
+    let mimeType = "";
+
+    if (validationId) {
+      const existing = await db.designValidation.findUnique({ where: { id: validationId } });
+      if (!existing) return NextResponse.json({ error: "Validation record not found" }, { status: 404 });
+      imageUrl = existing.imageUrl;
+      // Fetch image to send to AI
+      const res = await fetch(imageUrl);
+      const arrayBuffer = await res.arrayBuffer();
+      imageBuffer = Buffer.from(arrayBuffer);
+      mimeType = res.headers.get("content-type") || "image/png";
+    } else if (imageFile) {
+      if (!ALLOWED_MIME_TYPES.includes(imageFile.type)) return NextResponse.json({ error: "Invalid type" }, { status: 415 });
+      const arrayBuffer = await imageFile.arrayBuffer();
+      imageBuffer = Buffer.from(arrayBuffer);
+      mimeType = imageFile.type;
+      const fileId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const ext = mimeType === "image/png" ? "png" : "jpg";
+      imageUrl = await uploadToStorage("design-uploads", `${id}/${fileId}.${ext}`, imageBuffer, mimeType);
+    } else {
+      return NextResponse.json({ error: "No image source" }, { status: 400 });
     }
 
-    const analysis = project.analysis;
-    const visualDirection = analysis.visualDirection as any;
-    const featureScope = analysis.featureScope as any;
-
-    // Upload image to Supabase Storage
-    const arrayBuffer = await imageFile.arrayBuffer();
-    const imageBuffer = Buffer.from(arrayBuffer);
-    const fileId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const ext = imageFile.type === "image/png" ? "png" : "jpg";
-    const filePath = `${project.id}/${fileId}.${ext}`;
-
-    const imageUrl = await uploadToStorage(
-      "design-uploads",
-      filePath,
-      imageBuffer,
-      imageFile.type
-    );
-
-    // Build validation prompt
+    // AI Analysis
+    const visualDirection = (project.analysis.visualDirection as any) || {};
+    const featureScope = (project.analysis.featureScope as any) || {};
     let prompt = validationPromptTemplate
-      .replace("{websiteDirection}", analysis.websiteDirection)
-      .replace("{uxReasoning}", analysis.uxReasoning)
-      .replace("{visualDirection}", JSON.stringify(visualDirection))
-      .replace("{mustHaveFeatures}", (featureScope.mustHave || []).join(", "))
-      .replace("{mood}", (visualDirection.mood || []).join(", "));
+      .replace("{designDirection}", project.analysis.designDirection || "Not specified")
+      .replace("{mood}", (visualDirection.mood || []).join(", "))
+      .replace("{palette}", (visualDirection.palette || []).join(", "))
+      .replace("{mustHaveFeatures}", (featureScope.mustHave || []).slice(0, 5).join(", "));
 
-    if (userRequest) {
-      prompt += `\n\nUSER SPECIFIC REQUEST/CONTEXT: "${userRequest}"\nPlease take this into account when evaluating the design and suggesting improvements.`;
-    }
+    if (userRequest) prompt += `\n\nUSER REQUEST: "${userRequest}"`;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
-    const imagePart = {
-      inlineData: {
-        data: imageBuffer.toString("base64"),
-        mimeType: imageFile.type,
-      },
-    };
+    const client = new OpenAI({ baseURL: "https://router.huggingface.co/v1", apiKey: process.env.HF_TOKEN });
+    const base64Image = `data:${mimeType};base64,${imageBuffer!.toString("base64")}`;
 
     let feedback: any = null;
     let retries = 2;
-
     while (retries >= 0) {
       try {
-        const result = await model.generateContent([
-          prompt + "\n\nIMPORTANT: You must return ONLY valid JSON. Do not include markdown blocks like ```json.",
-          imagePart
-        ]);
-
-        const textResponse = result.response.text() || "{}";
-        const cleanedText = textResponse.replace(/```json/g, "").replace(/```/g, "").trim();
-        feedback = JSON.parse(cleanedText);
-        break; // Success
-      } catch (err) {
-        if (retries === 0) throw err;
-        retries--;
-        await new Promise((r) => setTimeout(r, 1000));
+        const completion = await client.chat.completions.create({
+          model: "Qwen/Qwen2.5-VL-72B-Instruct",
+          messages: [{ role: "user", content: [{ type: "text", text: prompt + "\n\nReturn JSON only." }, { type: "image_url", image_url: { url: base64Image } }] }],
+        });
+        feedback = JSON.parse(completion.choices[0]?.message?.content?.replace(/```json|```/g, "").trim() || "{}");
+        break;
+      } catch {
+        if (retries-- === 0) throw new Error("AI fail");
+        await new Promise(r => setTimeout(r, 1000));
       }
     }
 
-    if (!feedback) {
-      throw new Error("Invalid format from AI");
-    }
+    const validation = validationId 
+      ? await db.designValidation.update({ where: { id: validationId }, data: { feedback } })
+      : await db.designValidation.create({ data: { projectId: id, imageUrl, feedback } });
 
-    // Save DesignValidation record
-    const validation = await db.designValidation.create({
-      data: {
-        projectId: project.id,
-        imageUrl,
-        feedback,
-      },
-    });
-
-    return NextResponse.json({
-      feedback,
-      imageUrl,
-      id: validation.id,
-    });
+    return NextResponse.json({ id: validation.id, imageUrl, feedback });
   } catch (error) {
     console.error("[VALIDATE_DESIGN_POST]", error);
-    return NextResponse.json(
-      { error: "Design validation failed", retryable: true },
-      { status: 503 }
-    );
+    return NextResponse.json({ error: "Validation failed" }, { status: 500 });
   }
 }

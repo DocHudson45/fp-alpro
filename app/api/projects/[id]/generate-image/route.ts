@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { genAI } from "@/lib/gemini";
 import { uploadToStorage } from "@/lib/supabase-storage";
+import { HfInference } from "@huggingface/inference";
 import {
   buildImagePrompt,
   buildImagePromptFromValidation,
 } from "@/lib/prompts/imageGeneration";
+
+const hf = new HfInference(process.env.HF_TOKEN);
 
 export async function POST(
   req: Request,
@@ -16,9 +18,11 @@ export async function POST(
     const body = await req.json();
     const { imageType, validationId, userRequest } = body;
 
-    if (!imageType || !["moodboard", "concept"].includes(imageType)) {
+    // Allowed types: moodboard, concept, fixed
+    const allowedTypes = ["moodboard", "concept", "fixed"];
+    if (!imageType || !allowedTypes.includes(imageType)) {
       return NextResponse.json(
-        { error: "Invalid imageType. Must be 'moodboard' or 'concept'." },
+        { error: "Invalid imageType." },
         { status: 400 }
       );
     }
@@ -42,11 +46,11 @@ export async function POST(
     const analysis = project.analysis;
     const visualDirection = analysis.visualDirection as any;
 
-    // Build prompt based on path
     let prompt: string;
+    let finalImageType = imageType;
 
     if (validationId) {
-      // Path 2: from analysis + validation feedback
+      // Path 2: Fixed UI (from analysis + validation feedback)
       const validation = await db.designValidation.findUnique({
         where: { id: validationId },
       });
@@ -64,32 +68,35 @@ export async function POST(
         validation.feedback as any,
         userRequest
       );
+      finalImageType = "fixed";
     } else {
-      // Path 1: from analysis only
+      // Path 1: Initial (moodboard or concept)
       prompt = buildImagePrompt(
         visualDirection,
         project.businessType || "business",
-        imageType,
+        imageType as any,
         userRequest
       );
     }
 
-    // Call Pollinations AI for free, fast image generation
-    const encodedPrompt = encodeURIComponent(prompt);
-    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true`;
-    
-    const imageResponse = await fetch(pollinationsUrl);
+    // Call HuggingFace with fal-ai provider
+    // Model: ayrisdev/mobile-ui-design
+    const imageBlob = await hf.textToImage({
+      model: "ayrisdev/mobile-ui-design",
+      inputs: prompt,
+      provider: "fal-ai",
+    });
 
-    if (!imageResponse.ok) {
+    if (!imageBlob || imageBlob.size === 0) {
       return NextResponse.json(
-        { error: "Image generation returned no content", retryable: true },
+        { error: "Image generation failed", retryable: true },
         { status: 503 }
       );
     }
 
-    const arrayBuffer = await imageResponse.arrayBuffer();
+    const arrayBuffer = await imageBlob.arrayBuffer();
     const imageBuffer = Buffer.from(arrayBuffer);
-    const mimeType = imageResponse.headers.get("content-type") || "image/jpeg";
+    const mimeType = imageBlob.type || "image/png";
 
     const fileId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const ext = mimeType === "image/jpeg" ? "jpg" : "png";
@@ -108,16 +115,17 @@ export async function POST(
         projectId: project.id,
         prompt,
         imageUrl,
-        imageType,
+        imageType: finalImageType,
       },
     });
 
     return NextResponse.json({ imageUrl, id: generatedImage.id });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[GENERATE_IMAGE_POST]", error);
     return NextResponse.json(
-      { error: "Image generation failed", retryable: true },
+      { error: error.message || "Image generation failed", retryable: true },
       { status: 503 }
     );
   }
 }
+

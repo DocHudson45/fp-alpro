@@ -26,21 +26,21 @@ import { createProjectSchema } from "@/lib/validators/project";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import { Card, CardContent } from "./ui/card";
+import { Loader2, Sparkles, Save } from "lucide-react";
 
 export function ProjectForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   const form = useForm<z.infer<typeof createProjectSchema>>({
     resolver: zodResolver(createProjectSchema) as any,
     defaultValues: {
-      clientRequest: "",
+      name: "",
+      description: "",
       businessType: "",
       targetUser: "",
-      websiteGoal: "",
-      budget: "",
+      appGoal: "",
       desiredComplexity: "",
       techStack: "",
       freelancerRate: undefined,
@@ -48,21 +48,32 @@ export function ProjectForm() {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof createProjectSchema>) {
+  async function createProject(values: z.infer<typeof createProjectSchema>) {
+    const response = await fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(values),
+    });
+
+    if (!response.ok) {
+      throw new Error("Gagal membuat project");
+    }
+
+    return response.json();
+  }
+
+  async function onAnalyze(values: z.infer<typeof createProjectSchema>) {
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/projects", {
+      const data = await createProject(values);
+      toast.success("Project dibuat! Memulai analisis...");
+
+      // Trigger discovery immediately
+      const discoveryRes = await fetch(`/api/projects/${data.id}/discovery`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
       });
+      if (!discoveryRes.ok) throw new Error("Gagal memulai discovery");
 
-      if (!response.ok) {
-        throw new Error("Gagal membuat project");
-      }
-
-      const data = await response.json();
-      toast.success("Project berhasil dibuat!");
       router.push(`/projects/${data.id}`);
     } catch (error) {
       toast.error("Terjadi kesalahan. Silakan coba lagi.");
@@ -70,26 +81,67 @@ export function ProjectForm() {
     }
   }
 
+  async function onSaveDraft(values: z.infer<typeof createProjectSchema>) {
+    setIsSavingDraft(true);
+    try {
+      const data = await createProject(values);
+      toast.success("Draft berhasil disimpan!");
+      router.push(`/projects/${data.id}`);
+    } catch (error) {
+      toast.error("Terjadi kesalahan. Silakan coba lagi.");
+      setIsSavingDraft(false);
+    }
+  }
+
+  const isLoading = isSubmitting || isSavingDraft;
+
   return (
-    <Card className="border-0 shadow-none sm:border sm:border-slate-200 sm:shadow-sm bg-white overflow-hidden">
-      <CardContent className="p-0 sm:p-8">
+    <div className="rounded-2xl border border-white/[0.06] bg-[#141414] overflow-hidden">
+      <div className="p-6 sm:p-8">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
+            {/* Project Name — prominent */}
             <FormField
               control={form.control}
-              name="clientRequest"
+              name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-slate-900 font-semibold">Permintaan Klien <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel className="text-neutral-200 font-semibold text-base">
+                    Nama Project <span className="text-violet-400">*</span>
+                  </FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Contoh: Saya butuh website untuk kedai kopi saya yang baru buka..."
-                      className="resize-none h-32 bg-slate-50 focus-visible:ring-blue-500"
+                    <Input
+                      placeholder="Contoh: Kopi Kenangan Redesign"
+                      className="bg-[#1a1a1a] border-white/[0.06] text-neutral-200 placeholder:text-neutral-600 focus-visible:ring-violet-500/50 h-12 text-base"
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>
-                    Masukkan brief atau catatan mentah dari klien. Semakin detail, AI akan semakin akurat.
+                  <FormDescription className="text-neutral-500">
+                    Nama ini akan digunakan sebagai URL project.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Description */}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-neutral-200 font-semibold">
+                    Deskripsi Projek <span className="text-violet-400">*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Jelaskan tentang app mobile yang ingin didesain. Contoh: Aplikasi delivery makanan untuk UMKM lokal, fitur utama tracking pesanan real-time..."
+                      className="resize-none h-32 bg-[#1a1a1a] border-white/[0.06] text-neutral-200 placeholder:text-neutral-600 focus-visible:ring-violet-500/50"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription className="text-neutral-500">
+                    Deskripsikan app mobile yang ingin didesain. Semakin detail, AI semakin akurat.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -102,9 +154,13 @@ export function ProjectForm() {
                 name="businessType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-slate-900">Jenis Bisnis (opsional)</FormLabel>
+                    <FormLabel className="text-neutral-300">Jenis Bisnis (opsional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Contoh: FnB, Agency, SaaS" className="bg-slate-50 focus-visible:ring-blue-500" {...field} />
+                      <Input
+                        placeholder="Contoh: FnB, Fintech, E-commerce"
+                        className="bg-[#1a1a1a] border-white/[0.06] text-neutral-200 placeholder:text-neutral-600 focus-visible:ring-violet-500/50"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -116,9 +172,13 @@ export function ProjectForm() {
                 name="targetUser"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-slate-900">Target Pengguna (opsional)</FormLabel>
+                    <FormLabel className="text-neutral-300">Target Pengguna (opsional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Contoh: Mahasiswa, Ibu Rumah Tangga" className="bg-slate-50 focus-visible:ring-blue-500" {...field} />
+                      <Input
+                        placeholder="Contoh: Gen Z, Mahasiswa, Ibu Rumah Tangga"
+                        className="bg-[#1a1a1a] border-white/[0.06] text-neutral-200 placeholder:text-neutral-600 focus-visible:ring-violet-500/50"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -127,26 +187,16 @@ export function ProjectForm() {
 
               <FormField
                 control={form.control}
-                name="websiteGoal"
+                name="appGoal"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-slate-900">Tujuan Website (opsional)</FormLabel>
+                    <FormLabel className="text-neutral-300">Tujuan Aplikasi (opsional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Contoh: Leads, Penjualan, Company Profile" className="bg-slate-50 focus-visible:ring-blue-500" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="budget"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-slate-900">Budget (opsional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Contoh: Rp 5 Juta" className="bg-slate-50 focus-visible:ring-blue-500" {...field} />
+                      <Input
+                        placeholder="Contoh: Increase engagement, Monetization"
+                        className="bg-[#1a1a1a] border-white/[0.06] text-neutral-200 placeholder:text-neutral-600 focus-visible:ring-violet-500/50"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -158,14 +208,14 @@ export function ProjectForm() {
                 name="desiredComplexity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-slate-900">Kompleksitas (opsional)</FormLabel>
+                    <FormLabel className="text-neutral-300">Kompleksitas (opsional)</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="bg-slate-50 focus-visible:ring-blue-500">
+                        <SelectTrigger className="bg-[#1a1a1a] border-white/[0.06] text-neutral-200 focus-visible:ring-violet-500/50">
                           <SelectValue placeholder="Pilih kompleksitas" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="bg-[#1a1a1a] border-white/[0.06]">
                         <SelectItem value="Simple & Functional">Simple & Functional</SelectItem>
                         <SelectItem value="Clean & Professional">Clean & Professional</SelectItem>
                         <SelectItem value="Modern & Interactive">Modern & Interactive</SelectItem>
@@ -183,19 +233,19 @@ export function ProjectForm() {
                 name="techStack"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-slate-900">Tech Stack (opsional)</FormLabel>
+                    <FormLabel className="text-neutral-300">Tech Stack (opsional)</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="bg-slate-50 focus-visible:ring-blue-500">
+                        <SelectTrigger className="bg-[#1a1a1a] border-white/[0.06] text-neutral-200 focus-visible:ring-violet-500/50">
                           <SelectValue placeholder="Pilih tech stack" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Framer">Framer</SelectItem>
-                        <SelectItem value="Webflow">Webflow</SelectItem>
-                        <SelectItem value="WordPress">WordPress</SelectItem>
-                        <SelectItem value="Custom (React/Next.js)">Custom (React/Next.js)</SelectItem>
-                        <SelectItem value="Custom (Vue/Nuxt)">Custom (Vue/Nuxt)</SelectItem>
+                      <SelectContent className="bg-[#1a1a1a] border-white/[0.06]">
+                        <SelectItem value="Flutter">Flutter</SelectItem>
+                        <SelectItem value="React Native">React Native</SelectItem>
+                        <SelectItem value="Swift (iOS)">Swift (iOS)</SelectItem>
+                        <SelectItem value="Kotlin (Android)">Kotlin (Android)</SelectItem>
+                        <SelectItem value="Figma Prototype">Figma Prototype</SelectItem>
                         <SelectItem value="Other">Lainnya</SelectItem>
                       </SelectContent>
                     </Select>
@@ -210,39 +260,61 @@ export function ProjectForm() {
               name="references"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-slate-900">Referensi (URL, opsional)</FormLabel>
+                  <FormLabel className="text-neutral-300">Referensi Desain (URL, opsional)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="https://contoh1.com&#10;https://contoh2.com"
-                      className="bg-slate-50 focus-visible:ring-blue-500"
+                      placeholder={"https://dribbble.com/shots/contoh\nhttps://apps.apple.com/contoh"}
+                      className="bg-[#1a1a1a] border-white/[0.06] text-neutral-200 placeholder:text-neutral-600 focus-visible:ring-violet-500/50"
                       onChange={(e) => {
-                        const urls = e.target.value.split("\\n").filter(Boolean);
+                        const urls = e.target.value.split("\n").filter(Boolean);
                         field.onChange(urls);
                       }}
-                      value={field.value?.join("\\n") || ""}
+                      value={field.value?.join("\n") || ""}
                     />
                   </FormControl>
-                  <FormDescription>Satu URL per baris.</FormDescription>
+                  <FormDescription className="text-neutral-500">
+                    Satu URL per baris. AI akan scan & analisis layout dari referensi ini.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="pt-4 border-t border-slate-100 flex justify-end">
-              <Button type="submit" size="lg" disabled={isSubmitting} className="rounded-full shadow-sm px-8">
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Memproses...
-                  </>
+            {/* Action Buttons */}
+            <div className="pt-6 border-t border-white/[0.06] flex flex-col sm:flex-row justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                disabled={isLoading}
+                onClick={form.handleSubmit(onSaveDraft)}
+                className="rounded-xl border-white/[0.08] bg-transparent text-neutral-300 hover:bg-white/[0.04] hover:text-neutral-100"
+              >
+                {isSavingDraft ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  "Buat Project"
+                  <Save className="mr-2 h-4 w-4" />
                 )}
+                Save Draft
+              </Button>
+              <Button
+                type="button"
+                size="lg"
+                disabled={isLoading}
+                onClick={form.handleSubmit(onAnalyze)}
+                className="rounded-xl bg-violet-600 hover:bg-violet-700 text-white shadow-lg shadow-violet-900/30 px-8"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Analisis Langsung
               </Button>
             </div>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

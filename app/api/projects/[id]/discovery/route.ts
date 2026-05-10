@@ -23,11 +23,11 @@ export async function POST(
     }
 
     const prompt = discoveryPromptTemplate
-      .replace("{clientRequest}", project.clientRequest)
+      .replace("{name}", project.name || "not specified")
+      .replace("{description}", project.description || (project as any).clientRequest || "not specified")
       .replace("{businessType}", project.businessType || "not specified")
       .replace("{targetUser}", project.targetUser || "not specified")
-      .replace("{websiteGoal}", project.websiteGoal || "not specified")
-      .replace("{budget}", project.budget || "not specified")
+      .replace("{appGoal}", project.appGoal || (project as any).websiteGoal || "not specified")
       .replace("{desiredComplexity}", project.desiredComplexity || "not specified")
       .replace("{techStack}", project.techStack || "not specified");
 
@@ -46,7 +46,7 @@ export async function POST(
           messages: [
             {
               role: "user",
-              content: prompt + "\n\nIMPORTANT: You must return ONLY valid JSON. The JSON should be an object with a 'questions' array containing strings. Do not include markdown blocks like ```json.",
+              content: prompt + "\n\nIMPORTANT: Return ONLY valid JSON.",
             }
           ],
           temperature: 0.7,

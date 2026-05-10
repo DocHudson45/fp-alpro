@@ -18,58 +18,63 @@ interface ValidationFeedback {
   }>;
 }
 
+// Helper to format palette for the prompt
+const formatPalette = (palette: string[]) => {
+  return palette.map(color => `Hex ${color}`).join(", ");
+};
+
 // PATH 1 — from Analysis only
 export function buildImagePrompt(
   visualDirection: VisualDirection,
   businessType: string,
-  imageType: "moodboard" | "concept",
+  imageType: "moodboard" | "concept" | "fixed",
   userRequest?: string
 ): string {
-  const { palette, mood, layoutStyle, imageStyle, typography } = visualDirection;
+  const { palette, mood, imageStyle, typography, layoutStyle } = visualDirection;
+  const paletteStr = formatPalette(palette);
 
   if (imageType === "moodboard") {
-    let prompt = `A professional design moodboard for a ${businessType} website.
-Color palette featuring ${palette.join(", ")}.
-Visual mood: ${mood.join(", ")}.
-Typography style: ${typography.style}.
-Image style: ${imageStyle}.
-High-quality design reference, clean composition, modern aesthetic, suitable for a freelance designer's pitch deck.`;
-    if (userRequest) prompt += `\nInclude these specific user requests: ${userRequest}`;
+    let prompt = `Mobile UI design moodboard for a ${businessType} app. 
+MANDATORY COLORS: ${paletteStr}. 
+Visual Mood: ${mood.join(", ")}. 
+Typography: ${typography.style} (${typography.heading} and ${typography.body}). 
+Design Aesthetic: ${imageStyle}. 
+Composition: High-quality professional mobile UI kit components, button sets, iconography, and color swatches. Clean dark/light theme balance.`;
+    if (userRequest) prompt += ` User Specific Requirement: ${userRequest}`;
     return prompt;
   }
 
-  // imageType === "concept"
-  let prompt = `A concept mockup of a ${businessType} website homepage.
-Layout: ${layoutStyle}.
-Color palette: ${palette.join(", ")}.
-Visual mood: ${mood.join(", ")}.
-Image style: ${imageStyle}.
-Modern web design, clean UI, high quality, professional reference.`;
-  if (userRequest) prompt += `\nInclude these specific user requests: ${userRequest}`;
+  // imageType === "concept" or "fixed"
+  let prompt = `Full High-Fidelity Mobile App UI Screen for a ${businessType} app. 
+STRICT COLOR PALETTE: ${paletteStr}. Use these colors for backgrounds, buttons, and accents.
+Layout Style: ${layoutStyle}.
+Mood & Atmosphere: ${mood.join(", ")}.
+Visual Style: ${imageStyle}.
+Details: Professional mobile app interface, sharp UI elements, modern typography using ${typography.body}, high contrast, premium mobile UX.`;
+  if (userRequest) prompt += ` Additional Detail: ${userRequest}`;
   return prompt;
 }
 
-// PATH 2 — from Analysis + Validation feedback
+// PATH 2 — from Analysis + Validation feedback (Fixed UI)
 export function buildImagePromptFromValidation(
   visualDirection: VisualDirection,
   businessType: string,
   feedback: ValidationFeedback,
   userRequest?: string
 ): string {
-  const { palette, mood, layoutStyle, imageStyle } = visualDirection;
+  const { palette, mood, imageStyle, layoutStyle } = visualDirection;
+  const paletteStr = formatPalette(palette);
 
   const fixes = feedback.issues
-    .filter((i) => i.priority === "high" || i.priority === "medium")
     .map((i) => i.suggestion)
     .join(". ");
 
-  let prompt = `A revised concept mockup of a ${businessType} website homepage.
-Apply these specific design improvements: ${fixes}.
-Color palette: ${palette.join(", ")}.
-Visual mood: ${mood.join(", ")}.
-Layout: ${layoutStyle}.
-Image style: ${imageStyle}.
-Modern web design, clean UI, high quality, professional reference.`;
-  if (userRequest) prompt += `\nInclude these specific user requests: ${userRequest}`;
+  let prompt = `Revised and corrected High-Fidelity Mobile App UI for a ${businessType} app. 
+REQUIRED IMPROVEMENTS: ${fixes}. 
+STRICT COLOR PALETTE: ${paletteStr}. 
+Visual Direction: ${mood.join(", ")}, ${imageStyle}. 
+Layout: ${layoutStyle}. 
+Focus: Fixing all previous UI/UX flaws while strictly maintaining the brand colors ${paletteStr}. High-quality mobile mockup.`;
+  if (userRequest) prompt += ` Extra Request: ${userRequest}`;
   return prompt;
 }

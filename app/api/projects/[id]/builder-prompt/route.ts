@@ -89,3 +89,8 @@ export async function POST(
     );
   }
 }
+{ error: "AI Generation failed", retryable: true },
+{ status: 503 }
+    );
+  }
+}

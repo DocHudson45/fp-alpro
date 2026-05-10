@@ -11,52 +11,52 @@ interface FeatureScopeProps {
 
 export function FeatureScopeTable({ features }: FeatureScopeProps) {
   return (
-    <Card className="border-slate-200 shadow-sm overflow-hidden col-span-1 lg:col-span-2">
-      <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
-        <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
-          <ListChecks className="h-5 w-5 text-slate-600" />
-          Ruang Lingkup Fitur
+    <Card className="border-white/[0.06] bg-[#141414] overflow-hidden">
+      <CardHeader className="bg-[#111111] border-b border-white/[0.04] pb-3">
+        <CardTitle className="text-sm font-bold text-neutral-200 flex items-center gap-2">
+          <ListChecks className="h-4 w-4 text-blue-400" />
+          Fitur
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-          <div className="p-6">
-            <h4 className="text-sm font-semibold text-emerald-600 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4" /> Must Have
+        <div className="divide-y divide-white/[0.04]">
+          <div className="p-4">
+            <h4 className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <CheckCircle2 className="h-3 w-3" /> Must Have
             </h4>
-            <ul className="space-y-3">
+            <ul className="space-y-1.5">
               {features.mustHave.map((item, i) => (
-                <li key={i} className="text-sm text-slate-700 flex items-start gap-2">
+                <li key={i} className="text-xs text-neutral-400 flex items-start gap-1.5">
                   <span className="text-emerald-500 mt-0.5">•</span>
-                  <span>{item}</span>
+                  {item}
                 </li>
               ))}
             </ul>
           </div>
           
-          <div className="p-6">
-            <h4 className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4" /> Nice to Have
+          <div className="p-4">
+            <h4 className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <CheckCircle2 className="h-3 w-3" /> Nice to Have
             </h4>
-            <ul className="space-y-3">
+            <ul className="space-y-1.5">
               {features.niceToHave.map((item, i) => (
-                <li key={i} className="text-sm text-slate-700 flex items-start gap-2">
+                <li key={i} className="text-xs text-neutral-400 flex items-start gap-1.5">
                   <span className="text-blue-500 mt-0.5">•</span>
-                  <span>{item}</span>
+                  {item}
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="p-6">
-            <h4 className="text-sm font-semibold text-rose-600 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <XCircle className="h-4 w-4" /> Not Recommended
+          <div className="p-4">
+            <h4 className="text-[10px] font-semibold text-rose-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <XCircle className="h-3 w-3" /> Not Recommended
             </h4>
-            <ul className="space-y-3">
+            <ul className="space-y-1.5">
               {features.notRecommended.map((item, i) => (
-                <li key={i} className="text-sm text-slate-700 flex items-start gap-2">
+                <li key={i} className="text-xs text-neutral-400 flex items-start gap-1.5">
                   <span className="text-rose-500 mt-0.5">•</span>
-                  <span>{item}</span>
+                  {item}
                 </li>
               ))}
             </ul>

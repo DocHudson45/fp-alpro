@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, Copy, Check, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,7 +17,6 @@ const TOOLS = [
   { value: "framer", label: "Framer" },
   { value: "v0", label: "v0" },
   { value: "bolt", label: "Bolt" },
-  { value: "webflow", label: "Webflow" },
   { value: "lovable", label: "Lovable" },
   { value: "replit", label: "Replit" },
   { value: "claude", label: "Claude" },
@@ -70,28 +68,27 @@ export function BuilderPromptCard({
   };
 
   return (
-    <Card className="border-indigo-100 shadow-sm bg-indigo-50/30 overflow-hidden">
-      <CardHeader className="bg-indigo-50/50 border-b border-indigo-100 pb-4">
-        <CardTitle className="text-lg font-bold text-indigo-900 flex items-center gap-2">
-          <Wand2 className="h-5 w-5 text-indigo-600" />
+    <Card className="border-white/[0.06] bg-[#141414] overflow-hidden">
+      <CardHeader className="bg-[#111111] border-b border-white/[0.04] pb-3">
+        <CardTitle className="text-sm font-bold text-neutral-200 flex items-center gap-2">
+          <Wand2 className="h-4 w-4 text-indigo-400" />
           Builder Prompt
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-6 space-y-4">
-        <p className="text-sm text-slate-600">
-          Pilih tool AI builder, lalu generate prompt siap pakai untuk langsung
-          di-copy-paste.
+      <CardContent className="pt-4 pb-4 space-y-4">
+        <p className="text-xs text-neutral-500">
+          Pilih tool AI, lalu generate prompt siap copy-paste.
         </p>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {TOOLS.map((tool) => (
             <button
               key={tool.value}
               onClick={() => setSelectedTool(tool.value)}
-              className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
+              className={`px-2.5 py-1 text-[11px] rounded-lg border transition-all ${
                 selectedTool === tool.value
-                  ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                  : "bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-700"
+                  ? "bg-violet-600 text-white border-violet-600"
+                  : "bg-[#1a1a1a] text-neutral-400 border-white/[0.06] hover:border-violet-500/30 hover:text-violet-400"
               }`}
             >
               {tool.label}
@@ -102,36 +99,37 @@ export function BuilderPromptCard({
         <Button
           onClick={handleGenerate}
           disabled={isLoading}
-          className="w-full rounded-lg"
+          size="sm"
+          className="w-full rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs"
         >
           {isLoading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
               Generating...
             </>
           ) : (
             <>
-              <Wand2 className="mr-2 h-4 w-4" />
-              Generate Prompt untuk {TOOLS.find((t) => t.value === selectedTool)?.label}
+              <Wand2 className="mr-2 h-3.5 w-3.5" />
+              Generate untuk {TOOLS.find((t) => t.value === selectedTool)?.label}
             </>
           )}
         </Button>
 
         {prompt && (
           <div className="relative">
-            <div className="bg-slate-900 text-slate-100 p-4 rounded-lg text-sm font-mono whitespace-pre-wrap max-h-80 overflow-y-auto leading-relaxed">
+            <div className="bg-[#0a0a0a] text-neutral-300 p-3 rounded-lg text-[11px] font-mono whitespace-pre-wrap max-h-60 overflow-y-auto leading-relaxed border border-white/[0.04] custom-scrollbar">
               {prompt}
             </div>
             <Button
               size="sm"
               variant="ghost"
               onClick={handleCopy}
-              className="absolute top-2 right-2 text-slate-400 hover:text-white hover:bg-slate-700"
+              className="absolute top-1.5 right-1.5 h-7 w-7 p-0 text-neutral-500 hover:text-white hover:bg-white/[0.1]"
             >
               {isCopied ? (
-                <Check className="h-4 w-4" />
+                <Check className="h-3.5 w-3.5" />
               ) : (
-                <Copy className="h-4 w-4" />
+                <Copy className="h-3.5 w-3.5" />
               )}
             </Button>
           </div>
