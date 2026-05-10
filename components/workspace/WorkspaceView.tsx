@@ -310,12 +310,6 @@ function WorkspaceInner({ project, onRefresh }: WorkspaceViewProps) {
     <div ref={containerRef} className="w-full flex" style={{ height: "calc(100vh - 56px)" }}>
       {/* LEFT PANEL */}
       <div className="shrink-0 overflow-y-auto bg-[#111111] border-r border-white/[0.04] custom-scrollbar" style={{ width: `${leftPct}%` }}>
-        <div className="p-4 border-b border-white/[0.04] glass sticky top-0 z-10">
-          <h2 className="text-sm font-bold text-neutral-200 tracking-tight flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-violet-400" /> Analisis
-          </h2>
-          <p className="text-[11px] text-neutral-600 mt-0.5">Hasil analisis desain mobile UI/UX</p>
-        </div>
         <div className="p-4 space-y-4">
           {analysis.designDirection && <WebsiteDirectionCard direction={analysis.designDirection} />}
           {analysis.websiteDirection && !analysis.designDirection && <WebsiteDirectionCard direction={analysis.websiteDirection} />}
@@ -406,15 +400,9 @@ function WorkspaceInner({ project, onRefresh }: WorkspaceViewProps) {
 
       {/* RIGHT PANEL */}
       <div className="shrink-0 overflow-y-auto bg-[#111111] border-l border-white/[0.04] custom-scrollbar" style={{ width: `${rightPct}%` }}>
-        <div className="p-4 border-b border-white/[0.04] glass sticky top-0 z-10">
-          <h2 className="text-sm font-bold text-neutral-200 tracking-tight flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Hasil Validasi
-          </h2>
-          <p className="text-[11px] text-neutral-600 mt-0.5">Feedback untuk gambar terpilih</p>
-        </div>
         <div className="p-4">
           {!selectedNode ? (
-            <div className="text-center py-16">
+            <div className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center text-center">
               <div className="h-14 w-14 rounded-2xl bg-[#1a1a1a] border border-white/[0.06] flex items-center justify-center mx-auto mb-4">
                 <MousePointerClick className="h-7 w-7 text-neutral-700" />
               </div>

@@ -37,10 +37,16 @@
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/) & [shadcn/ui](https://ui.shadcn.com/)
 - **Database Backend:** [Supabase](https://supabase.com/) (Auth, Storage)
 - **ORM:** [Prisma](https://www.prisma.io/)
-- **AI Integrations:** [Google Gemini API](https://ai.google.dev/)
+- **AI Integrations:** ayrisdev/mobile-ui-design, Qwen/Qwen2.5-VL-72B-Instruct
 - **Interactive UI:** [React Flow](https://reactflow.dev/) (xyflow)
 
-## 💻 Panduan Instalasi (Development)
+## Kendala
+
+Kami membutuhkan LLM image + text -> image untuk bagian fix design. Salah satu opsinya adalah menggunakan model berikut `https://github.com/ModelTC/Qwen-Image-Edit-Causa`. Model ini perlu di deploy karena membutuhkan GPU dan pipeline khusus.
+
+Akhirnya kami memilih untuk mengubah image -> text dahulu meski harus berkompromi dengan kualitas.
+
+## Panduan Instalasi (Development)
 
 Untuk menjalankan proyek ini secara lokal, ikuti langkah-langkah berikut:
 
