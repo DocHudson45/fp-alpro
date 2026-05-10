@@ -14,7 +14,7 @@ export async function POST(
   try {
     const id = (await params).id;
     const body = await req.json();
-    const { imageType, validationId } = body;
+    const { imageType, validationId, userRequest } = body;
 
     if (!imageType || !["moodboard", "concept"].includes(imageType)) {
       return NextResponse.json(
@@ -61,14 +61,16 @@ export async function POST(
       prompt = buildImagePromptFromValidation(
         visualDirection,
         project.businessType || "business",
-        validation.feedback as any
+        validation.feedback as any,
+        userRequest
       );
     } else {
       // Path 1: from analysis only
       prompt = buildImagePrompt(
         visualDirection,
         project.businessType || "business",
-        imageType
+        imageType,
+        userRequest
       );
     }
 

@@ -22,33 +22,39 @@ interface ValidationFeedback {
 export function buildImagePrompt(
   visualDirection: VisualDirection,
   businessType: string,
-  imageType: "moodboard" | "concept"
+  imageType: "moodboard" | "concept",
+  userRequest?: string
 ): string {
   const { palette, mood, layoutStyle, imageStyle, typography } = visualDirection;
 
   if (imageType === "moodboard") {
-    return `A professional design moodboard for a ${businessType} website.
+    let prompt = `A professional design moodboard for a ${businessType} website.
 Color palette featuring ${palette.join(", ")}.
 Visual mood: ${mood.join(", ")}.
 Typography style: ${typography.style}.
 Image style: ${imageStyle}.
 High-quality design reference, clean composition, modern aesthetic, suitable for a freelance designer's pitch deck.`;
+    if (userRequest) prompt += `\nInclude these specific user requests: ${userRequest}`;
+    return prompt;
   }
 
   // imageType === "concept"
-  return `A concept mockup of a ${businessType} website homepage.
+  let prompt = `A concept mockup of a ${businessType} website homepage.
 Layout: ${layoutStyle}.
 Color palette: ${palette.join(", ")}.
 Visual mood: ${mood.join(", ")}.
 Image style: ${imageStyle}.
 Modern web design, clean UI, high quality, professional reference.`;
+  if (userRequest) prompt += `\nInclude these specific user requests: ${userRequest}`;
+  return prompt;
 }
 
 // PATH 2 — from Analysis + Validation feedback
 export function buildImagePromptFromValidation(
   visualDirection: VisualDirection,
   businessType: string,
-  feedback: ValidationFeedback
+  feedback: ValidationFeedback,
+  userRequest?: string
 ): string {
   const { palette, mood, layoutStyle, imageStyle } = visualDirection;
 
@@ -57,11 +63,13 @@ export function buildImagePromptFromValidation(
     .map((i) => i.suggestion)
     .join(". ");
 
-  return `A revised concept mockup of a ${businessType} website homepage.
+  let prompt = `A revised concept mockup of a ${businessType} website homepage.
 Apply these specific design improvements: ${fixes}.
 Color palette: ${palette.join(", ")}.
 Visual mood: ${mood.join(", ")}.
 Layout: ${layoutStyle}.
 Image style: ${imageStyle}.
 Modern web design, clean UI, high quality, professional reference.`;
+  if (userRequest) prompt += `\nInclude these specific user requests: ${userRequest}`;
+  return prompt;
 }

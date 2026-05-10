@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import OpenAI from "openai";
+import { genAI } from "@/lib/gemini";
 import { uploadToStorage } from "@/lib/supabase-storage";
 import { validationPromptTemplate } from "@/lib/prompts/validation";
 
@@ -16,6 +16,7 @@ export async function POST(
 
     const formData = await req.formData();
     const imageFile = formData.get("image") as File | null;
+    const userRequest = formData.get("userRequest") as string | null;
 
     if (!imageFile) {
       return NextResponse.json(
@@ -75,48 +76,37 @@ export async function POST(
     );
 
     // Build validation prompt
-    const prompt = validationPromptTemplate
+    let prompt = validationPromptTemplate
       .replace("{websiteDirection}", analysis.websiteDirection)
       .replace("{uxReasoning}", analysis.uxReasoning)
       .replace("{visualDirection}", JSON.stringify(visualDirection))
       .replace("{mustHaveFeatures}", (featureScope.mustHave || []).join(", "))
       .replace("{mood}", (visualDirection.mood || []).join(", "));
 
-    const client = new OpenAI({
-      baseURL: "https://router.huggingface.co/v1",
-      apiKey: process.env.HF_TOKEN,
-    });
+    if (userRequest) {
+      prompt += `\n\nUSER SPECIFIC REQUEST/CONTEXT: "${userRequest}"\nPlease take this into account when evaluating the design and suggesting improvements.`;
+    }
 
-    const base64Image = `data:${imageFile.type};base64,${imageBuffer.toString("base64")}`;
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
+    const imagePart = {
+      inlineData: {
+        data: imageBuffer.toString("base64"),
+        mimeType: imageFile.type,
+      },
+    };
+
     let feedback: any = null;
     let retries = 2;
 
     while (retries >= 0) {
       try {
-        const completion = await client.chat.completions.create({
-          model: "Qwen/Qwen2.5-VL-72B-Instruct",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: prompt + "\n\nIMPORTANT: You must return ONLY valid JSON. Do not include markdown blocks like ```json.",
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: base64Image,
-                  },
-                },
-              ],
-            },
-          ],
-          temperature: 0.4,
-        });
+        const result = await model.generateContent([
+          prompt + "\n\nIMPORTANT: You must return ONLY valid JSON. Do not include markdown blocks like ```json.",
+          imagePart
+        ]);
 
-        const textResponse = completion.choices[0].message.content || "{}";
+        const textResponse = result.response.text() || "{}";
         const cleanedText = textResponse.replace(/```json/g, "").replace(/```/g, "").trim();
         feedback = JSON.parse(cleanedText);
         break; // Success

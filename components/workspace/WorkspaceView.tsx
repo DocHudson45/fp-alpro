@@ -1,28 +1,41 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { 
-  LayoutDashboard, 
-  Sparkles, 
-  Info, 
-  CheckCircle2, 
-  AlertTriangle, 
-  ImagePlus, 
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  useNodesState,
+  useEdgesState,
+  type Node,
+  type NodeTypes,
+  type NodeProps,
+  Handle,
+  Position,
+} from "@xyflow/react";
+import {
   Paperclip,
-  ChevronRight,
-  Maximize2,
-  Download,
   Loader2,
-  Menu,
-  X,
-  Palette,
-  Layout,
-  Layers,
-  Zap
+  ChevronDown,
+  Image as ImageIcon,
+  Sparkles,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  MousePointerClick,
+  GripVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+
 import { WebsiteDirectionCard } from "../WebsiteDirectionCard";
 import { UxReasoningCard } from "../UxReasoningCard";
 import { VisualDirectionCard } from "../VisualDirectionCard";
@@ -31,462 +44,700 @@ import { ComplexityCard } from "../ComplexityCard";
 import { RiskFactorCard } from "../RiskFactorCard";
 import { BuilderPromptCard } from "../BuilderPromptCard";
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 interface WorkspaceViewProps {
   project: any;
   onRefresh: () => Promise<void>;
 }
 
-export function WorkspaceView({ project, onRefresh }: WorkspaceViewProps) {
-  const [activeSection, setActiveSection] = useState("overview");
-  const [messages, setMessages] = useState<any[]>([]);
-  const [isAnyLoading, setIsAnyLoading] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+interface ImageNodeData {
+  imageUrl: string;
+  label: string;
+  imageType: string;
+  validationId?: string;
+  feedback?: any;
+  [key: string]: unknown;
+}
 
-  const analysis = project.analysis;
+type ImageFlowNode = Node<ImageNodeData, "imageNode">;
 
-  // Sync messages from project data (validations and images)
-  useEffect(() => {
-    if (!project) return;
-    const existingMessages: any[] = [];
-    
-    if (project.designValidations) {
-      for (const v of project.designValidations) {
-        existingMessages.push({
-          id: `val-user-${v.id}`,
-          type: "user-image",
-          timestamp: new Date(v.createdAt),
-          content: { imageUrl: v.imageUrl },
-        });
-        existingMessages.push({
-          id: `val-ai-${v.id}`,
-          type: "ai-validation",
-          timestamp: new Date(v.createdAt),
-          content: { feedback: v.feedback, validationId: v.id },
-        });
-      }
-    }
+// ─── Custom Image Node ──────────────────────────────────────────────────────
 
-    if (project.generatedImages) {
-      for (const img of project.generatedImages) {
-        existingMessages.push({
-          id: `img-${img.id}`,
-          type: "ai-image",
-          timestamp: new Date(img.createdAt),
-          content: { imageUrl: img.imageUrl, imageType: img.imageType },
-        });
-      }
-    }
-
-    existingMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-    setMessages(existingMessages);
-  }, [project]);
-
-  // Handle image upload and generation logic (mirrored from ChatPanel)
-  const handleAttachImage = () => fileInputRef.current?.click();
-
-  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    const formData = new FormData();
-    formData.append("image", file);
-
-    setIsAnyLoading(true);
-    const loadingId = `loading-${Date.now()}`;
-    setMessages(prev => [...prev, { id: loadingId, type: "loading", content: { text: "Menganalisis..." } }]);
-
-    try {
-      const res = await fetch(`/api/projects/${project.id}/validate-design`, {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Gagal validasi");
-      const data = await res.json();
-      
-      setMessages(prev => prev.filter(m => m.id !== loadingId));
-      toast.success("Desain divalidasi!");
-      await onRefresh();
-    } catch (err) {
-      setMessages(prev => prev.filter(m => m.id !== loadingId));
-      toast.error("Gagal validasi");
-    } finally {
-      setIsAnyLoading(false);
-    }
-  };
-
-  const handleGenerate = async (type: "moodboard" | "concept") => {
-    setIsAnyLoading(true);
-    const loadingId = `loading-${Date.now()}`;
-    setMessages(prev => [...prev, { id: loadingId, type: "loading", content: { text: `Generating ${type}...` } }]);
-
-    try {
-      const res = await fetch(`/api/projects/${project.id}/generate-image`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageType: type }),
-      });
-      if (!res.ok) throw new Error("Gagal generate");
-      
-      setMessages(prev => prev.filter(m => m.id !== loadingId));
-      toast.success(`${type} berhasil dibuat!`);
-      await onRefresh();
-    } catch (err) {
-      setMessages(prev => prev.filter(m => m.id !== loadingId));
-      toast.error("Gagal generate");
-    } finally {
-      setIsAnyLoading(false);
-    }
-  };
-
+function ImageNode({ data, selected }: NodeProps<ImageFlowNode>) {
   return (
-    <div className="fixed inset-0 top-[56px] bg-[#FAFBFD] flex overflow-hidden font-sans">
-      {/* LEFT SIDEBAR: Analysis Navigation */}
-      <aside className={`bg-white border-r border-slate-200/60 flex flex-col transition-all duration-300 z-30 shadow-[4px_0_24px_rgba(0,0,0,0.02)] ${isSidebarOpen ? "w-72" : "w-0 -translate-x-full"}`}>
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-          <span className="font-extrabold text-slate-900 tracking-tighter text-sm flex items-center gap-2">
-            <div className="bg-blue-600 rounded-lg p-1.5 shadow-lg shadow-blue-200">
-              <LayoutDashboard className="h-3.5 w-3.5 text-white" />
-            </div>
-            STRATEGY WORKSPACE
-          </span>
-          <Button variant="ghost" size="icon" className="h-8 w-8 lg:hidden text-slate-400 hover:text-slate-900" onClick={() => setIsSidebarOpen(false)}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-        
-        <nav className="flex-1 overflow-y-auto p-3 space-y-1.5 custom-scrollbar">
-          <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1">Foundations</div>
-          <SidebarItem 
-            icon={<Sparkles className="h-4 w-4" />} 
-            label="Dashboard Overview" 
-            active={activeSection === "overview"} 
-            onClick={() => setActiveSection("overview")} 
-          />
-          
-          <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-6 mb-1">Visual & Brand</div>
-          <SidebarItem 
-            icon={<Palette className="h-4 w-4" />} 
-            label="Visual Studio" 
-            active={activeSection === "visual"} 
-            onClick={() => setActiveSection("visual")} 
-          />
-          <SidebarItem 
-            icon={<Layout className="h-4 w-4" />} 
-            label="Website Blueprint" 
-            active={activeSection === "website"} 
-            onClick={() => setActiveSection("website")} 
-          />
-          <SidebarItem 
-            icon={<Layers className="h-4 w-4" />} 
-            label="UX Strategy" 
-            active={activeSection === "ux"} 
-            onClick={() => setActiveSection("ux")} 
-          />
-          
-          <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-6 mb-1">Execution</div>
-          <SidebarItem 
-            icon={<CheckCircle2 className="h-4 w-4" />} 
-            label="Core Features" 
-            active={activeSection === "features"} 
-            onClick={() => setActiveSection("features")} 
-          />
-          <SidebarItem 
-            icon={<Zap className="h-4 w-4" />} 
-            label="Technical Scope" 
-            active={activeSection === "complexity"} 
-            onClick={() => setActiveSection("complexity")} 
-          />
-          <SidebarItem 
-            icon={<Info className="h-4 w-4" />} 
-            label="AI Builder Prompt" 
-            active={activeSection === "builder"} 
-            onClick={() => setActiveSection("builder")} 
-          />
-        </nav>
-
-        <div className="p-5 border-t border-slate-100 bg-slate-50/30">
-          <div className="bg-white p-3 rounded-2xl border border-slate-200/60 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-black shadow-lg shadow-blue-100">
-                {project.businessType?.[0] || "P"}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-black text-slate-900 truncate tracking-tight">{project.businessType}</p>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">v1.0.2 Draft</p>
-              </div>
-            </div>
+    <div
+      className={`group relative rounded-xl overflow-hidden shadow-lg border-2 transition-all duration-200 bg-white ${
+        selected
+          ? "border-blue-500 ring-4 ring-blue-100 shadow-blue-200/50"
+          : "border-slate-200 hover:border-slate-300 hover:shadow-xl"
+      }`}
+      style={{ maxWidth: 600, minWidth: 240 }}
+    >
+      <img
+        src={data.imageUrl}
+        alt={data.label}
+        className="w-full h-auto block"
+        draggable={false}
+      />
+      {/* Label overlay */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2.5">
+        <span className="text-[10px] font-bold text-white uppercase tracking-wider">
+          {data.label}
+        </span>
+      </div>
+      {/* Validation indicator */}
+      {data.feedback && (
+        <div className="absolute top-2 right-2">
+          <div className="h-7 w-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold shadow-lg">
+            {data.feedback.alignmentScore ?? "✓"}
           </div>
         </div>
-      </aside>
-
-      {/* CENTER: Infinite-style Canvas */}
-      <main className="flex-1 relative overflow-hidden flex flex-col">
-        {/* Canvas Background Grid */}
-        <div className="absolute inset-0 z-0 opacity-[0.04] pointer-events-none" 
-          style={{ backgroundImage: "radial-gradient(#2563eb 0.5px, transparent 0)", backgroundSize: "32px 32px" }} 
-        />
-
-        {/* Toolbar */}
-        <header className="h-16 border-b border-slate-200/60 bg-white/40 backdrop-blur-xl flex items-center justify-between px-8 z-20">
-          <div className="flex items-center gap-5">
-            {!isSidebarOpen && (
-              <Button variant="ghost" size="icon" className="hover:bg-blue-50 text-blue-600" onClick={() => setIsSidebarOpen(true)}>
-                <Menu className="h-5 w-5" />
-              </Button>
-            )}
-            <div className="flex items-center gap-2 text-slate-400">
-              <span className="text-[11px] font-bold uppercase tracking-widest opacity-50">Projects</span>
-              <ChevronRight className="h-3 w-3" />
-              <span className="text-[11px] font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{activeSection}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex -space-x-2 mr-4">
-              {[1,2].map(i => (
-                <div key={i} className="h-7 w-7 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500 ring-1 ring-slate-100">AI</div>
-              ))}
-              <div className="h-7 w-7 rounded-full border-2 border-white bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 ring-1 ring-slate-100">ST</div>
-            </div>
-            <Button variant="outline" size="sm" className="h-9 px-4 text-xs font-bold rounded-xl bg-white border-slate-200 hover:bg-slate-50 shadow-sm transition-all">
-              <Download className="h-3.5 w-3.5 mr-2 opacity-50" />
-              Export Brief
-            </Button>
-            <Button size="sm" className="h-9 px-5 text-xs font-bold rounded-xl shadow-lg shadow-blue-200 bg-blue-600 hover:bg-blue-700 transition-all">
-              Share Workspace
-            </Button>
-          </div>
-        </header>
-
-        {/* Scrollable Canvas Content */}
-        <div className="flex-1 overflow-auto p-12 relative z-0 scroll-smooth custom-scrollbar bg-transparent">
-          <div className="max-w-6xl mx-auto pb-48">
-            <div className="mb-12">
-              <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-2 flex items-center gap-3">
-                {activeSection === "overview" ? "Strategic Foundation" : 
-                 activeSection === "visual" ? "Visual Language & Identity" :
-                 activeSection === "website" ? "Website Architecture" :
-                 activeSection === "ux" ? "User Experience Strategy" :
-                 activeSection === "features" ? "Product Requirements" :
-                 activeSection === "complexity" ? "Technical Feasibility" : "AI Execution Prompt"}
-                <Badge className="bg-blue-100 text-blue-600 border-none px-2 py-0 text-[10px] font-black tracking-tighter uppercase">Verified</Badge>
-              </h1>
-              <p className="text-slate-500 text-sm max-w-2xl font-medium leading-relaxed">
-                {activeSection === "overview" ? "Comprehensive strategy generated from your project brief and discovery questions." : 
-                 "In-depth analysis focused on " + activeSection + " to ensure project success and alignment."}
-              </p>
-            </div>
-
-            {activeSection === "visual" && <VisualDirectionCard visual={analysis.visualDirection} />}
-            {activeSection === "website" && <WebsiteDirectionCard direction={analysis.websiteDirection} />}
-            {activeSection === "ux" && <UxReasoningCard reasoning={analysis.uxReasoning} />}
-            {activeSection === "features" && <FeatureScopeTable features={analysis.featureScope} />}
-            {activeSection === "complexity" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <ComplexityCard 
-                  complexity={analysis.complexity} 
-                  reason={analysis.complexityReason} 
-                  estimate={analysis.effortEstimate} 
-                />
-                <RiskFactorCard risks={analysis.riskFactors} />
-              </div>
-            )}
-            {activeSection === "builder" && (
-              <BuilderPromptCard 
-                projectId={project.id} 
-                existingPrompt={analysis.builderPrompt} 
-                existingTool={analysis.builderTargetTool} 
-              />
-            )}
-
-            {/* Visual Assets Gallery (Always visible at bottom or in specific view) */}
-            {(messages.some(m => m.type === "ai-image" || m.type === "user-image")) && (
-              <div className="pt-12 mt-12 border-t border-slate-200">
-                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-                  <Layout className="h-5 w-5 text-purple-500" />
-                  Visual Exploration Assets
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {messages.filter(m => m.type === "ai-image" || m.type === "user-image").map((msg, i) => (
-                    <div key={i} className="group relative bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                      <div className="aspect-video relative overflow-hidden bg-slate-100">
-                        <img src={msg.content.imageUrl} alt="Asset" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full" onClick={() => window.open(msg.content.imageUrl, "_blank")}>
-                            <Maximize2 className="h-4 w-4" />
-                          </Button>
-                          <a href={msg.content.imageUrl} download className="h-8 w-8 bg-white text-slate-900 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors">
-                            <Download className="h-4 w-4" />
-                          </a>
-                        </div>
-                      </div>
-                      <div className="p-3 flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                          {msg.type === "user-image" ? "Uploaded Design" : msg.content.imageType}
-                        </span>
-                        <Badge variant="outline" className="text-[9px] font-medium border-slate-100 bg-slate-50">
-                          {new Date(msg.timestamp).toLocaleDateString()}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+      )}
+      {!data.feedback && data.imageType === "upload" && (
+        <div className="absolute top-2 right-2">
+          <div className="h-6 w-6 rounded-full bg-amber-400 text-white flex items-center justify-center shadow-lg">
+            <AlertTriangle className="h-3 w-3" />
           </div>
         </div>
-
-        {/* BOTTOM FLOATING ACTION BAR: Chat/Studio */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 z-20">
-          <div className="bg-white/80 backdrop-blur-xl border border-white shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-full p-2 flex items-center gap-2">
-            <input 
-              ref={fileInputRef} 
-              type="file" 
-              accept="image/png,image/jpeg" 
-              onChange={handleFileSelected} 
-              className="hidden" 
-            />
-            <Button 
-              onClick={handleAttachImage} 
-              variant="ghost" 
-              size="icon" 
-              className="rounded-full h-10 w-10 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-              disabled={isAnyLoading}
-            >
-              <Paperclip className="h-5 w-5" />
-            </Button>
-            
-            <div className="flex-1 px-4 py-2 text-sm text-slate-400 font-medium">
-              {isAnyLoading ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>AI is working...</span>
-                </div>
-              ) : (
-                "Upload a design for validation or explore visual concepts..."
-              )}
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Button 
-                onClick={() => handleGenerate("moodboard")} 
-                variant="ghost" 
-                size="sm" 
-                className="rounded-full text-xs font-bold text-slate-600 hover:text-purple-600 hover:bg-purple-50"
-                disabled={isAnyLoading}
-              >
-                Moodboard
-              </Button>
-              <Button 
-                onClick={() => handleGenerate("concept")} 
-                className="rounded-full text-xs font-bold bg-slate-900 hover:bg-black text-white px-4 h-9 shadow-lg"
-                disabled={isAnyLoading}
-              >
-                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                Generate Concept
-              </Button>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* RIGHT SIDEBAR: Project Details & Insights */}
-      <aside className="w-80 bg-white border-l border-slate-200 hidden xl:flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-slate-100 font-bold text-slate-900 tracking-tight text-xs uppercase flex items-center gap-2">
-          <Info className="h-4 w-4 text-slate-400" />
-          Project Insights
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-5 space-y-8">
-          {/* Project Summary */}
-          <div>
-            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Brief Summary</h4>
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-              <p className="text-xs text-slate-700 leading-relaxed italic">
-                "{project.clientRequest.substring(0, 150)}..."
-              </p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                <Badge variant="outline" className="bg-white border-slate-200 text-[9px]">{project.targetUser}</Badge>
-                <Badge variant="outline" className="bg-white border-slate-200 text-[9px]">{project.budget}</Badge>
-              </div>
-            </div>
-          </div>
-
-          {/* AI Validation Insights (Latest) */}
-          {messages.filter(m => m.type === "ai-validation").length > 0 && (
-            <div>
-              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Latest AI Feedback</h4>
-              {messages.filter(m => m.type === "ai-validation").slice(-1).map((msg, i) => (
-                <div key={i} className="space-y-4">
-                  <div className="flex items-center gap-3 bg-emerald-50 rounded-2xl p-3 border border-emerald-100">
-                    <div className="h-10 w-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center font-bold text-lg">
-                      {msg.content.feedback.alignmentScore}
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-emerald-900">Alignment Score</p>
-                      <p className="text-[10px] text-emerald-700 opacity-70">Design to Brief Match</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-slate-500 flex items-center gap-1 uppercase">
-                      <AlertTriangle className="h-3 w-3 text-amber-500" />
-                      Critical Issues
-                    </p>
-                    {msg.content.feedback.issues?.filter((iss: any) => iss.priority === "high").slice(0, 3).map((issue: any, idx: number) => (
-                      <div key={idx} className="p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
-                        <p className="text-xs font-bold text-slate-800 mb-1">{issue.issue}</p>
-                        <p className="text-[10px] text-slate-500 leading-tight">{issue.suggestion}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Complexity Indicator */}
-          <div className="pt-6 border-t border-slate-100">
-            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Technical Feasibility</h4>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] font-medium text-slate-500">Complexity</span>
-                <span className="text-[10px] font-bold text-slate-900 capitalize">{analysis.complexity}</span>
-              </div>
-              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div className={`h-full transition-all duration-1000 ${
-                  analysis.complexity === "low" ? "bg-emerald-400 w-1/3" :
-                  analysis.complexity === "medium" ? "bg-amber-400 w-2/3" :
-                  "bg-red-400 w-full"
-                }`} />
-              </div>
-              <p className="text-[10px] text-slate-400 leading-tight">
-                Estimated effort: <span className="text-slate-700 font-bold">{analysis.effortEstimate.min} - {analysis.effortEstimate.max} Hours</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </aside>
+      )}
     </div>
   );
 }
 
-function SidebarItem({ icon, label, active, onClick }: { icon: React.ReactNode, label: string, active?: boolean, onClick: () => void }) {
+const nodeTypes: NodeTypes = {
+  imageNode: ImageNode,
+};
+
+// ─── Resizable Divider ──────────────────────────────────────────────────────
+
+function ResizeDivider({
+  onMouseDown,
+}: {
+  onMouseDown: (e: React.MouseEvent) => void;
+}) {
   return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-        active 
-          ? "bg-blue-50 text-blue-700 shadow-sm" 
-          : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-      }`}
+    <div
+      className="w-1.5 bg-slate-100 hover:bg-blue-300 active:bg-blue-400 cursor-col-resize flex items-center justify-center transition-colors duration-150 shrink-0 group relative"
+      onMouseDown={onMouseDown}
     >
-      <span className={`${active ? "text-blue-600" : "text-slate-400"}`}>
-        {icon}
-      </span>
-      {label}
-      {active && <ChevronRight className="ml-auto h-3 w-3 opacity-50" />}
-    </button>
+      <div className="absolute inset-y-0 -left-1 -right-1 z-10" />
+      <GripVertical className="h-4 w-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
+    </div>
+  );
+}
+
+// ─── Main Component ─────────────────────────────────────────────────────────
+
+export function WorkspaceView({ project, onRefresh }: WorkspaceViewProps) {
+  const analysis = project.analysis;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Panel widths as percentages (of container)
+  const [leftPct, setLeftPct] = useState(25);
+  const [rightPct, setRightPct] = useState(25);
+  const [isResizingLeft, setIsResizingLeft] = useState(false);
+  const [isResizingRight, setIsResizingRight] = useState(false);
+
+  const [chatInput, setChatInput] = useState("");
+  const [isAnyLoading, setIsAnyLoading] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  // ReactFlow state
+  const [nodes, setNodes, onNodesChange] = useNodesState<ImageFlowNode>([]);
+  const [edges, , onEdgesChange] = useEdgesState([]);
+
+  // Build nodes from project data
+  useEffect(() => {
+    if (!project) return;
+    const newNodes: ImageFlowNode[] = [];
+    let col = 0;
+    let row = 0;
+    const spacing = { x: 280, y: 220 };
+    const cols = 3;
+
+    // Generated images
+    if (project.generatedImages) {
+      for (const img of project.generatedImages) {
+        newNodes.push({
+          id: `img-${img.id}`,
+          type: "imageNode",
+          position: { x: col * spacing.x + 40, y: row * spacing.y + 40 },
+          data: {
+            imageUrl: img.imageUrl,
+            label: img.imageType === "moodboard" ? "Moodboard" : "Concept",
+            imageType: img.imageType,
+          },
+        });
+        col++;
+        if (col >= cols) {
+          col = 0;
+          row++;
+        }
+      }
+    }
+
+    // Uploaded images with their validations
+    if (project.designValidations) {
+      for (const v of project.designValidations) {
+        newNodes.push({
+          id: `val-${v.id}`,
+          type: "imageNode",
+          position: { x: col * spacing.x + 40, y: row * spacing.y + 40 },
+          data: {
+            imageUrl: v.imageUrl,
+            label: "Uploaded Design",
+            imageType: "upload",
+            validationId: v.id,
+            feedback: v.feedback,
+          },
+        });
+        col++;
+        if (col >= cols) {
+          col = 0;
+          row++;
+        }
+      }
+    }
+
+    setNodes(newNodes);
+  }, [project, setNodes]);
+
+  // Get selected node data for the right panel
+  const selectedNode = useMemo(() => {
+    if (!selectedNodeId) return null;
+    return nodes.find((n) => n.id === selectedNodeId) ?? null;
+  }, [selectedNodeId, nodes]);
+
+  // ─── Panel Resize Logic ─────────────────────────────────────────
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const totalW = rect.width;
+
+      if (isResizingLeft) {
+        const newPct = Math.min(
+          40,
+          Math.max(15, ((e.clientX - rect.left) / totalW) * 100)
+        );
+        setLeftPct(newPct);
+      }
+
+      if (isResizingRight) {
+        const newPct = Math.min(
+          40,
+          Math.max(15, ((rect.right - e.clientX) / totalW) * 100)
+        );
+        setRightPct(newPct);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingLeft(false);
+      setIsResizingRight(false);
+    };
+
+    if (isResizingLeft || isResizingRight) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizingLeft, isResizingRight]);
+
+  // ─── Handlers ───────────────────────────────────────────────────
+
+  const handleAttachImage = () => fileInputRef.current?.click();
+
+  const handleFileSelected = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("image", file);
+    if (chatInput.trim()) formData.append("userRequest", chatInput.trim());
+
+    setIsAnyLoading(true);
+    try {
+      const res = await fetch(
+        `/api/projects/${project.id}/validate-design`,
+        { method: "POST", body: formData }
+      );
+      if (!res.ok) throw new Error("Gagal validasi");
+      toast.success("Desain divalidasi!");
+      setChatInput("");
+      await onRefresh();
+    } catch {
+      toast.error("Gagal validasi desain");
+    } finally {
+      setIsAnyLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleGenerate = async (type: "moodboard" | "concept", valId?: string) => {
+    setIsAnyLoading(true);
+    try {
+      const res = await fetch(
+        `/api/projects/${project.id}/generate-image`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            imageType: type, 
+            validationId: valId,
+            userRequest: chatInput.trim() 
+          }),
+        }
+      );
+      if (!res.ok) throw new Error("Gagal generate");
+      toast.success(`${type === "moodboard" ? "Moodboard" : "Concept"} berhasil dibuat!`);
+      setChatInput("");
+      await onRefresh();
+    } catch {
+      toast.error("Gagal generate gambar");
+    } finally {
+      setIsAnyLoading(false);
+    }
+  };
+
+  const handleValidateSelected = async () => {
+    if (!selectedNode?.data?.imageUrl) return;
+    setIsAnyLoading(true);
+    try {
+      // Fetch the image and re-validate it
+      const imgRes = await fetch(selectedNode.data.imageUrl);
+      const blob = await imgRes.blob();
+      const formData = new FormData();
+      formData.append("image", blob, "design.png");
+      if (chatInput.trim()) formData.append("userRequest", chatInput.trim());
+
+      const res = await fetch(
+        `/api/projects/${project.id}/validate-design`,
+        { method: "POST", body: formData }
+      );
+      if (!res.ok) throw new Error("Gagal validasi");
+      toast.success("Desain divalidasi!");
+      setChatInput("");
+      await onRefresh();
+    } catch {
+      toast.error("Gagal validasi desain");
+    } finally {
+      setIsAnyLoading(false);
+    }
+  };
+
+  const onNodeClick = useCallback(
+    (_: React.MouseEvent, node: ImageFlowNode) => {
+      setSelectedNodeId(node.id);
+    },
+    []
+  );
+
+  const onPaneClick = useCallback(() => {
+    setSelectedNodeId(null);
+  }, []);
+
+  // ─── Render ─────────────────────────────────────────────────────
+
+  return (
+    <div
+      ref={containerRef}
+      className="w-full flex"
+      style={{ height: "calc(100vh - 56px)" }}
+    >
+      {/* ═══ LEFT PANEL: Analysis Cards ═══ */}
+      <div
+        className="shrink-0 overflow-y-auto bg-slate-50/80 border-r border-slate-200 custom-scrollbar"
+        style={{ width: `${leftPct}%` }}
+      >
+        <div className="p-4 border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+          <h2 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-blue-500" />
+            Analisis SRS
+          </h2>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Hasil analisis dari brief klien
+          </p>
+        </div>
+        <div className="p-4 space-y-4">
+          {analysis.websiteDirection && (
+            <WebsiteDirectionCard direction={analysis.websiteDirection} />
+          )}
+          {analysis.uxReasoning && (
+            <UxReasoningCard reasoning={analysis.uxReasoning} />
+          )}
+          {analysis.visualDirection && (
+            <VisualDirectionCard visual={analysis.visualDirection} />
+          )}
+          {analysis.featureScope && (
+            <FeatureScopeTable features={analysis.featureScope} />
+          )}
+          {analysis.complexity && (
+            <ComplexityCard
+              complexity={analysis.complexity}
+              reason={analysis.complexityReason}
+              estimate={analysis.effortEstimate}
+            />
+          )}
+          {analysis.riskFactors && (
+            <RiskFactorCard risks={analysis.riskFactors} />
+          )}
+          <BuilderPromptCard
+            projectId={project.id}
+            existingPrompt={analysis.builderPrompt}
+            existingTool={analysis.builderTargetTool}
+          />
+        </div>
+      </div>
+
+      {/* ═══ LEFT RESIZE DIVIDER ═══ */}
+      <ResizeDivider onMouseDown={() => setIsResizingLeft(true)} />
+
+      {/* ═══ CENTER PANEL: ReactFlow Canvas ═══ */}
+      <div className="flex-1 flex flex-col min-w-0 relative bg-white">
+        {/* Canvas */}
+        <div className="flex-1 relative">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeClick={onNodeClick}
+            onPaneClick={onPaneClick}
+            nodeTypes={nodeTypes}
+            fitView
+            fitViewOptions={{ padding: 0.3 }}
+            minZoom={0.2}
+            maxZoom={2}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background color="#e2e8f0" gap={24} size={1} />
+            <Controls
+              className="!shadow-lg !border-slate-200 !rounded-xl overflow-hidden"
+              showInteractive={false}
+            />
+            <MiniMap
+              className="!shadow-lg !border-slate-200 !rounded-xl !bg-white/90"
+              maskColor="rgba(59, 130, 246, 0.08)"
+              nodeColor="#3b82f6"
+              style={{ width: 120, height: 80 }}
+            />
+          </ReactFlow>
+
+          {/* Empty state */}
+          {nodes.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="text-center">
+                <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                  <ImageIcon className="h-8 w-8 text-slate-300" />
+                </div>
+                <p className="text-sm font-medium text-slate-400">
+                  Belum ada gambar di canvas
+                </p>
+                <p className="text-xs text-slate-300 mt-1">
+                  Upload desain atau generate moodboard/concept
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ═══ BOTTOM BAR ═══ */}
+        <div className="border-t border-slate-200 bg-white/90 backdrop-blur-sm px-4 py-3 flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg"
+            onChange={handleFileSelected}
+            className="hidden"
+          />
+
+          {/* Paperclip upload */}
+          <Button
+            onClick={handleAttachImage}
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 shrink-0"
+            disabled={isAnyLoading}
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
+
+          {/* Text input */}
+          <input
+            type="text"
+            className="flex-1 px-3 py-2 text-sm text-slate-800 bg-slate-50 rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            placeholder="Ketik request spesifik (contoh: pakai warna biru cerah)..."
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            disabled={isAnyLoading}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                // Can trigger standard generation if desired, but user relies on buttons
+              }
+            }}
+          />
+
+          {/* Generate dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-3 text-xs font-semibold rounded-lg border-slate-200 gap-1.5 shrink-0"
+                disabled={isAnyLoading}
+              >
+                <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                Generate
+                <ChevronDown className="h-3 w-3 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem
+                onClick={() => handleGenerate("moodboard")}
+                className="cursor-pointer"
+              >
+                <ImageIcon className="h-4 w-4 text-purple-500 mr-2" />
+                Moodboard
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleGenerate("concept")}
+                className="cursor-pointer"
+              >
+                <Sparkles className="h-4 w-4 text-blue-500 mr-2" />
+                Concept
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Validasi button */}
+          <Button
+            size="sm"
+            className="h-9 px-4 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+            disabled={isAnyLoading || !selectedNode}
+            onClick={handleValidateSelected}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+            Validasi
+          </Button>
+        </div>
+      </div>
+
+      {/* ═══ RIGHT RESIZE DIVIDER ═══ */}
+      <ResizeDivider onMouseDown={() => setIsResizingRight(true)} />
+
+      {/* ═══ RIGHT PANEL: Validation Feedback ═══ */}
+      <div
+        className="shrink-0 overflow-y-auto bg-slate-50/80 border-l border-slate-200 custom-scrollbar"
+        style={{ width: `${rightPct}%` }}
+      >
+        <div className="p-4 border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+          <h2 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            Hasil Validasi
+          </h2>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Feedback untuk gambar terpilih
+          </p>
+        </div>
+
+        <div className="p-4">
+          {!selectedNode ? (
+            /* No image selected */
+            <div className="text-center py-16">
+              <div className="h-14 w-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                <MousePointerClick className="h-7 w-7 text-slate-300" />
+              </div>
+              <p className="text-sm font-medium text-slate-400">
+                Pilih gambar di canvas
+              </p>
+              <p className="text-xs text-slate-300 mt-1">
+                Klik gambar untuk melihat hasil validasi
+              </p>
+            </div>
+          ) : !selectedNode.data.feedback ? (
+            /* Selected but not validated */
+            <div className="text-center py-12">
+              <div className="h-14 w-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="h-7 w-7 text-amber-400" />
+              </div>
+              <p className="text-sm font-semibold text-slate-700 mb-1">
+                Belum divalidasi
+              </p>
+              <p className="text-xs text-slate-400 mb-5 max-w-[200px] mx-auto">
+                Gambar ini belum dianalisis oleh AI. Validasi sekarang untuk mendapatkan feedback.
+              </p>
+              <Button
+                size="sm"
+                className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-5"
+                onClick={handleValidateSelected}
+                disabled={isAnyLoading}
+              >
+                {isAnyLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                )}
+                Validasi Sekarang
+              </Button>
+            </div>
+          ) : (
+            /* Has validation feedback */
+            <ValidationFeedbackPanel 
+              feedback={selectedNode.data.feedback}
+              validationId={selectedNode.data.validationId as string}
+              isGenerating={isAnyLoading}
+              onGenerateFromFeedback={(valId) => handleGenerate("concept", valId)}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Validation Feedback Sub-Component ──────────────────────────────────────
+
+function ValidationFeedbackPanel({ 
+  feedback, 
+  validationId, 
+  onGenerateFromFeedback, 
+  isGenerating 
+}: { 
+  feedback: any;
+  validationId?: string;
+  onGenerateFromFeedback: (id: string) => void;
+  isGenerating: boolean;
+}) {
+  return (
+    <div className="space-y-5">
+      {/* Score */}
+      <div className="flex items-center gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div
+          className={`h-14 w-14 rounded-xl flex items-center justify-center text-xl font-bold text-white shadow-lg ${
+            (feedback.alignmentScore ?? 0) >= 7
+              ? "bg-emerald-500"
+              : (feedback.alignmentScore ?? 0) >= 4
+              ? "bg-amber-500"
+              : "bg-rose-500"
+          }`}
+        >
+          {feedback.alignmentScore ?? "?"}
+        </div>
+        <div>
+          <p className="text-sm font-bold text-slate-900">Alignment Score</p>
+          <p className="text-[11px] text-slate-400">
+            Kesesuaian desain dengan brief
+          </p>
+        </div>
+      </div>
+
+      {/* Strengths */}
+      {feedback.strengths && feedback.strengths.length > 0 && (
+        <div>
+          <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+            Strengths
+          </h4>
+          <div className="space-y-2">
+            {feedback.strengths.map((s: any, i: number) => (
+              <div
+                key={i}
+                className="text-xs text-slate-700 bg-emerald-50 border border-emerald-100 rounded-lg p-3 leading-relaxed"
+              >
+                <span className="font-semibold text-emerald-900 block mb-1">
+                  {typeof s === "string" ? s : s.point}
+                </span>
+                {typeof s === "object" && s.explanation && (
+                  <span className="opacity-90">{s.explanation}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Issues */}
+      {feedback.issues && feedback.issues.length > 0 && (
+        <div>
+          <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+            Issues
+          </h4>
+          <div className="space-y-2">
+            {feedback.issues.map((issue: any, i: number) => (
+              <div
+                key={i}
+                className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <p className="text-xs font-semibold text-slate-800">
+                    {issue.issue}
+                  </p>
+                  <Badge
+                    className={`shrink-0 text-[9px] uppercase shadow-none ${
+                      issue.priority === "high"
+                        ? "bg-rose-100 text-rose-700"
+                        : issue.priority === "medium"
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {issue.priority}
+                  </Badge>
+                </div>
+                {issue.suggestion && (
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    💡 {issue.suggestion}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Summary */}
+      {feedback.summary && (
+        <div>
+          <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Ringkasan
+          </h4>
+          <p className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-lg p-3 leading-relaxed">
+            {feedback.summary}
+          </p>
+        </div>
+      )}
+
+      {/* Action Button */}
+      {validationId && (
+        <Button
+          className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-sm"
+          onClick={() => onGenerateFromFeedback(validationId)}
+          disabled={isGenerating}
+        >
+          {isGenerating ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <Sparkles className="h-4 w-4 mr-2" />
+          )}
+          Generate Concept dari Feedback
+        </Button>
+      )}
+    </div>
   );
 }
