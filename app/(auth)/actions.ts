@@ -17,7 +17,11 @@ export async function login(formData: FormData) {
   })
 
   if (error) {
-    redirect(`/login?message=${encodeURIComponent(error.message)}`)
+    let errorMessage = error.message;
+    if (error.message.includes("Invalid login credentials")) {
+      errorMessage = "Email belum terdaftar atau password salah, mohon registrasi terlebih dahulu.";
+    }
+    redirect(`/login?message=${encodeURIComponent(errorMessage)}`)
   }
 
   revalidatePath('/', 'layout')
@@ -37,7 +41,11 @@ export async function signup(formData: FormData) {
   })
 
   if (error) {
-    redirect(`/signup?message=${encodeURIComponent(error.message)}`)
+    let errorMessage = error.message;
+    if (error.message.includes("User already registered")) {
+      errorMessage = "Email telah terdaftar. Silakan login atau gunakan email lain.";
+    }
+    return redirect(`/signup?message=${encodeURIComponent(errorMessage)}`)
   }
 
   // Ensure the user exists in Prisma
