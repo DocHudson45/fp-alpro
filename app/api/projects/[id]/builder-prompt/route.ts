@@ -46,7 +46,7 @@ export async function POST(
     const prompt = builderPromptTemplate
       .replace("{targetTool}", targetTool)
       .replace("{targetTool}", targetTool)
-      .replace("{websiteDirection}", analysis.websiteDirection)
+      .replace("{websiteDirection}", analysis.designDirection)
       .replace("{visualDirection}", JSON.stringify(visualDirection))
       .replace("{mustHaveFeatures}", (featureScope.mustHave || []).join(", "))
       .replace("{niceToHaveFeatures}", (featureScope.niceToHave || []).join(", "))
@@ -86,11 +86,6 @@ export async function POST(
     return NextResponse.json(
       { error: "AI Generation failed", retryable: true },
       { status: 503 }
-    );
-  }
-}
-{ error: "AI Generation failed", retryable: true },
-{ status: 503 }
     );
   }
 }

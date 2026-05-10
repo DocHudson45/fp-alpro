@@ -81,11 +81,13 @@ export async function POST(
 
     // Call HuggingFace with fal-ai provider
     // Model: ayrisdev/mobile-ui-design
-    const imageBlob = await hf.textToImage({
+    const imageResponse = await hf.textToImage({
       model: "ayrisdev/mobile-ui-design",
       inputs: prompt,
       provider: "fal-ai",
     });
+
+    const imageBlob = imageResponse as any;
 
     if (!imageBlob || imageBlob.size === 0) {
       return NextResponse.json(

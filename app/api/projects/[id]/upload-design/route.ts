@@ -45,7 +45,6 @@ export async function POST(
       data: {
         projectId: id,
         imageUrl,
-        feedback: null,
       },
     });
 
