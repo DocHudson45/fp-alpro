@@ -19,15 +19,15 @@
 
 ---
 
-## 🚀 Fitur Utama
+## Fitur Utama
 
-- 📋 **Project Discovery:** Kumpulkan dan pahami kebutuhan klien (brief) secara mendalam lewat antarmuka form yang intuitif.
-- 🧠 **AI Analysis:** AI secara otomatis menganalisis kompleksitas teknis, kebutuhan backend, fitur aplikasi, dan merumuskan model bisnis.
-- 🎨 **Moodboard Generation:** Hasilkan aset visual dan referensi desain secara instan berdasarkan kebutuhan teknis dan target audiens proyek.
-- 📐 **Unified Canvas Workflow:** Visualisasikan seluruh analisis, moodboard, dan insight dalam satu kanvas interaktif (menggunakan React Flow).
-- ⚙️ **Builder Prompts (Prompt Architect):** Hasilkan *prompt* khusus yang dioptimalkan untuk digunakan pada platform AI builder seperti v0, Cursor, atau Framer.
+- **Project Discovery:** Kumpulkan dan pahami kebutuhan klien (brief) secara mendalam lewat antarmuka form yang intuitif.
+- **AI Analysis:** AI secara otomatis menganalisis kompleksitas teknis, kebutuhan backend, fitur aplikasi, dan merumuskan model bisnis.
+- **Moodboard Generation:** Hasilkan aset visual dan referensi desain secara instan berdasarkan kebutuhan teknis dan target audiens proyek.
+- **Unified Canvas Workflow:** Visualisasikan seluruh analisis, moodboard, dan insight dalam satu kanvas interaktif (menggunakan React Flow).
+- **Builder Prompts (Prompt Architect):** Hasilkan *prompt* khusus yang dioptimalkan untuk digunakan pada platform AI builder seperti v0, Cursor, atau Framer.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Framework:** [Next.js (App Router)](https://nextjs.org/)
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/) & [shadcn/ui](https://ui.shadcn.com/)
@@ -49,8 +49,6 @@ cd nama-repo
 **2. Instalasi dependensi**
 ```bash
 npm install
-# atau
-yarn install
 ```
 
 **3. Konfigurasi Environment Variables**
@@ -80,12 +78,3 @@ npx prisma db push
 npm run dev
 ```
 Buka [http://localhost:3000](http://localhost:3000) pada browser Anda untuk melihat aplikasi yang berjalan.
-
-## 🚢 Deployment
-
-Aplikasi ini sangat optimal dan mudah di-deploy ke **Vercel**. 
-
-1. Push kodenya ke repo GitHub publik/privat Anda.
-2. Login ke [Vercel](https://vercel.com/) dan "Add New Project", pilih repositori tersebut.
-3. **Penting:** Pastikan untuk menambahkan semua *Environment Variables* di atas pada menu *Settings > Environment Variables* Vercel Anda sebelum melakukan konfirmasi Deploy.
-4. Klik **Deploy**!
