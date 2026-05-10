@@ -53,8 +53,7 @@ export async function signup(formData: FormData) {
     })
   }
 
-  revalidatePath('/', 'layout')
-  redirect('/projects')
+  return redirect(`/signup?message=${encodeURIComponent("Registrasi berhasil! Silakan periksa kotak masuk/spam email Anda untuk verifikasi.")}&type=success`)
 }
 
 export async function logout() {

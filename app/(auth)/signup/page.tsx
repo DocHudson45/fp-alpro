@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Sparkles, UserPlus } from 'lucide-react'
 
-export default async function SignupPage({ searchParams }: { searchParams: Promise<{ message: string }> }) {
+export default async function SignupPage({ searchParams }: { searchParams: Promise<{ message: string, type?: string }> }) {
   const params = await searchParams;
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 stitch-canvas relative overflow-hidden">
@@ -60,8 +60,8 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
             </div>
 
             {params?.message && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-                <p className="text-xs font-medium text-red-400 text-center">
+              <div className={`border rounded-lg p-3 ${params.type === 'success' ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                <p className={`text-xs font-medium text-center ${params.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
                   {params.message}
                 </p>
               </div>
