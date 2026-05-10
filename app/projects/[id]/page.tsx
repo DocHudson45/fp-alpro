@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 
+import { WorkspaceView } from "@/components/workspace/WorkspaceView";
+
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
   const { id } = unwrappedParams;
@@ -84,8 +86,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const isAnalyzed = project.status === "ANALYZED" && project.analysis;
 
+  // Use WorkspaceView for ANALYZED state
+  if (isAnalyzed) {
+    return <WorkspaceView project={project} onRefresh={fetchProject} />;
+  }
+
   return (
-    <div className={`container mx-auto px-4 py-10 ${isAnalyzed ? "max-w-[1400px]" : "max-w-4xl"}`}>
+    <div className="container mx-auto px-4 py-10 max-w-4xl">
       <Button asChild variant="ghost" className="mb-6 -ml-4 text-slate-500 hover:text-slate-900">
         <Link href="/projects">
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -189,25 +196,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             fetchProject();
           }}
         />
-      )}
-
-      {/* ANALYZED State — Two Column Layout */}
-      {isAnalyzed && (
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Left Column: Analysis Cards (40%) */}
-          <div className="w-full lg:w-2/5 shrink-0">
-            <AnalysisResult analysis={project.analysis} projectId={project.id} />
-          </div>
-
-          {/* Right Column: Chat Panel (60%) */}
-          <div className="w-full lg:w-3/5 lg:sticky lg:top-6 lg:self-start" style={{ height: "calc(100vh - 6rem)" }}>
-            <ChatPanel
-              projectId={project.id}
-              existingValidations={project.designValidations}
-              existingImages={project.generatedImages}
-            />
-          </div>
-        </div>
       )}
     </div>
   );
