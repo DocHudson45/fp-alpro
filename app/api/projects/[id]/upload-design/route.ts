@@ -40,11 +40,12 @@ export async function POST(
       imageFile.type
     );
 
-    // Save Record (feedback is null/optional now)
+    // Save Record
     const validation = await db.designValidation.create({
       data: {
         projectId: id,
         imageUrl,
+        feedback: [], // Default empty JSON to avoid NullConstraintViolation if DB isn't synced
       },
     });
 
