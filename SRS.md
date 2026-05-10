@@ -832,15 +832,15 @@ async function callGeminiWithRetry(fn, maxRetries = 1) {
 
 | Field             | Type                        | Required | Indonesian Label                  |
 | ----------------- | --------------------------- | -------- | --------------------------------- |
-| clientRequest     | Textarea                    | ✅       | "Permintaan Klien"                |
-| businessType      | Input                       | ❌       | "Jenis Bisnis"                    |
-| targetUser        | Input                       | ❌       | "Target Pengguna"                 |
-| websiteGoal       | Input                       | ❌       | "Tujuan Website"                  |
-| budget            | Input                       | ❌       | "Budget (opsional)"               |
-| desiredComplexity | Select                      | ❌       | "Kompleksitas yang Diinginkan"    |
-| techStack         | Select                      | ❌       | "Tech Stack"                      |
-| freelancerRate    | Number Input                | ❌       | "Rate per Jam (opsional)"         |
-| references        | Textarea (one URL per line) | ❌       | "Referensi (URL, satu per baris)" |
+| clientRequest     | Textarea                    |        | "Permintaan Klien"                |
+| businessType      | Input                       |        | "Jenis Bisnis"                    |
+| targetUser        | Input                       |        | "Target Pengguna"                 |
+| websiteGoal       | Input                       |        | "Tujuan Website"                  |
+| budget            | Input                       |        | "Budget (opsional)"               |
+| desiredComplexity | Select                      |        | "Kompleksitas yang Diinginkan"    |
+| techStack         | Select                      |        | "Tech Stack"                      |
+| freelancerRate    | Number Input                |        | "Rate per Jam (opsional)"         |
+| references        | Textarea (one URL per line) |        | "Referensi (URL, satu per baris)" |
 
 - Select options for `desiredComplexity`: "Simple & Functional", "Clean & Professional", "Modern & Interactive", "Premium / High-End", "Experimental / Creative".
 - Select options for `techStack`: "Framer", "Webflow", "WordPress", "Custom (React/Next.js)", "Custom (Vue/Nuxt)", "Other".
@@ -1011,17 +1011,17 @@ The following are explicitly **NOT** part of this MVP. Do not implement:
 
 The MVP is considered complete when:
 
-1. ✅ A user can create a new project from `/projects/new` with at least the `clientRequest` field.
-2. ✅ The project appears in `/projects` list immediately after creation.
-3. ✅ Clicking into a project triggers the discovery flow if `status === DRAFT`.
-4. ✅ The user can answer or skip discovery questions and proceed to analysis.
-5. ✅ The analysis page displays all 6 auto-displayed cards with non-empty, sensible content.
-6. ✅ Clicking "Generate Builder Prompt" with a selected tool returns a usable prompt.
-7. ✅ Clicking "Generate Moodboard" or "Generate Concept" returns and displays an image.
-8. ✅ Uploading a design image returns feedback with alignment score, strengths, and issues.
-9. ✅ All AI calls show appropriate loading and error states.
-10. ✅ The application is deployed on Vercel and publicly accessible.
-11. ✅ A `README.md` documents setup, env vars, and how to run locally.
+1.  A user can create a new project from `/projects/new` with at least the `clientRequest` field.
+2.  The project appears in `/projects` list immediately after creation.
+3.  Clicking into a project triggers the discovery flow if `status === DRAFT`.
+4.  The user can answer or skip discovery questions and proceed to analysis.
+5.  The analysis page displays all 6 auto-displayed cards with non-empty, sensible content.
+6.  Clicking "Generate Builder Prompt" with a selected tool returns a usable prompt.
+7.  Clicking "Generate Moodboard" or "Generate Concept" returns and displays an image.
+8.  Uploading a design image returns feedback with alignment score, strengths, and issues.
+9.  All AI calls show appropriate loading and error states.
+10.  The application is deployed on Vercel and publicly accessible.
+11.  A `README.md` documents setup, env vars, and how to run locally.
 
 ---
 

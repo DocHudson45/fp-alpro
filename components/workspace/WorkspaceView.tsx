@@ -489,7 +489,7 @@ function ValidationFeedbackPanel({ feedback, validationId, onGenerateFixedUI, is
                     issue.priority === "high" ? "bg-rose-500/10 text-rose-400" : issue.priority === "medium" ? "bg-amber-500/10 text-amber-400" : "bg-neutral-800 text-neutral-500"
                   }`}>{issue.priority}</Badge>
                 </div>
-                {issue.suggestion && <p className="text-[11px] text-neutral-500 leading-relaxed">💡 {issue.suggestion}</p>}
+                {issue.suggestion && <p className="text-[11px] text-neutral-500 leading-relaxed">Saran: {issue.suggestion}</p>}
               </div>
             ))}
           </div>

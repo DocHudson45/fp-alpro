@@ -255,7 +255,7 @@ export function ChatPanel({
           <div key={msg.id} className="flex justify-end mb-4">
             <div className="max-w-[80%] bg-blue-50 border border-blue-100 rounded-2xl rounded-br-md p-3">
               <p className="text-xs text-blue-500 font-medium mb-2">
-                📎 Desain yang diunggah
+                 Desain yang diunggah
               </p>
               <img
                 src={msg.content.imageUrl}
@@ -341,7 +341,7 @@ export function ChatPanel({
                             </Badge>
                           </div>
                           <p className="text-slate-500 text-xs">
-                            💡 {issue.suggestion}
+                            Saran: {issue.suggestion}
                           </p>
                         </li>
                       )
@@ -381,7 +381,7 @@ export function ChatPanel({
           <div key={msg.id} className="flex justify-start mb-4">
             <div className="max-w-[85%] bg-white border border-slate-200 rounded-2xl rounded-bl-md p-3 shadow-sm">
               <p className="text-xs text-purple-600 font-medium mb-2">
-                🖼️{" "}
+                {" "}
                 {msg.content.imageType === "moodboard"
                   ? "Moodboard"
                   : "Konsep Desain"}{" "}
@@ -437,7 +437,7 @@ export function ChatPanel({
       {/* Header */}
       <div className="px-5 py-3 bg-white border-b border-slate-100 shrink-0">
         <h3 className="font-semibold text-slate-800 text-sm">
-          🎨 Visual Studio
+          Visual Studio
         </h3>
         <p className="text-xs text-slate-500">
           Validasi desain & generate referensi visual
@@ -512,13 +512,13 @@ export function ChatPanel({
                   onClick={() => handleGenerateImage("moodboard")}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 transition-colors text-slate-700"
                 >
-                  🎨 Moodboard
+                  Moodboard
                 </button>
                 <button
                   onClick={() => handleGenerateImage("concept")}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 transition-colors text-slate-700"
                 >
-                  🖥️ Konsep Desain
+                   Konsep Desain
                 </button>
               </div>
             )}
