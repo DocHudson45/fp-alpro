@@ -84,7 +84,7 @@ export async function POST(
     const imageResponse = await hf.textToImage({
       model: "ayrisdev/mobile-ui-design",
       inputs: prompt,
-      provider: "fal-ai",
+      provider: "replicate",
     });
 
     const imageBlob = imageResponse as any;
