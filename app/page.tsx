@@ -3,6 +3,12 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Layout, Zap, Smartphone } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
+import { ProblemSection } from "@/components/landing/ProblemSection";
+import { SolutionSection } from "@/components/landing/SolutionSection";
+import { WorkflowSection } from "@/components/landing/WorkflowSection";
+import { FinalCtaSection } from "@/components/landing/FinalCtaSection";
+import { LandingFooter } from "@/components/landing/LandingFooter";
+
 export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -59,6 +65,19 @@ export default async function Home() {
           </div>
         </div>
       </section>
-   </div>
+
+      {/* New Landing Page Sections */}
+      <ProblemSection />
+      <SolutionSection />
+      <WorkflowSection />
+
+      <FinalCtaSection />
+      <LandingFooter />
+
+      {/* Version Label */}
+      <div className="fixed bottom-4 left-4 text-xs font-mono text-neutral-600 z-50 pointer-events-none">
+        v0.1.0
+      </div>
+    </div>
   );
 }
